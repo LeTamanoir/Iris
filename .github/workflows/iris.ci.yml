@@ -1,3 +1,5 @@
+name: Iris
+
 on:
   pull_request:
     branches:
