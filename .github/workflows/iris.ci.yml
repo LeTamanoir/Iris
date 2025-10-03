@@ -1,13 +1,26 @@
 name: Iris CI
 
 on:
-  push:
+  pull_request:
+    branches:
+      - main
     paths:
-      - '**.php'
-      - '.github/workflows/iris.ci.yml'
-      - 'mago.toml'
-      - 'composer.json'
-      - 'composer.lock'
+      - "**.php"
+      - ".github/workflows/iris.ci.yml"
+      - "mago.toml"
+      - "composer.json"
+      - "composer.lock"
+      - "phpunit.xml"
+  push:
+    branches:
+      - main
+    paths:
+      - "**.php"
+      - ".github/workflows/iris.ci.yml"
+      - "mago.toml"
+      - "composer.json"
+      - "composer.lock"
+      - "phpunit.xml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
