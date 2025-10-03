@@ -1,0 +1,51 @@
+{
+    "name": "letamanoir/iris",
+    "description": "Query gRPC backends with PHP",
+    "version": "0.0.1",
+    "keywords": [
+        "grpc"
+    ],
+    "homepage": "https://github.com/LeTamanoir/Iris",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Martin Saldinger",
+            "email": "martin.saldinger@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "carthage-software/mago": "1.0.0-beta.25",
+        "pestphp/pest": "^4.1",
+        "symfony/var-dumper": "^7.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Iris\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/mago format",
+        "lint": "vendor/bin/mago analyze"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "carthage-software/mago": true,
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
