@@ -1,13 +1,26 @@
-name: Iris CI
+name: Iris
 
 on:
-  push:
+  pull_request:
+    branches:
+      - main
     paths:
-      - '**.php'
-      - '.github/workflows/iris.ci.yml'
-      - 'mago.toml'
-      - 'composer.json'
-      - 'composer.lock'
+      - "**.php"
+      - ".github/workflows/iris.ci.yml"
+      - "mago.toml"
+      - "composer.json"
+      - "composer.lock"
+      - "phpunit.xml"
+  push:
+    branches:
+      - main
+    paths:
+      - "**.php"
+      - ".github/workflows/iris.ci.yml"
+      - "mago.toml"
+      - "composer.json"
+      - "composer.lock"
+      - "phpunit.xml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,6 +28,7 @@ concurrency:
 
 jobs:
   format:
+    name: Format
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -35,6 +49,7 @@ jobs:
         run: vendor/bin/mago format --check
 
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -64,7 +79,7 @@ jobs:
         php: [8.4, 8.3]
         stability: [prefer-lowest, prefer-stable]
 
-    name: P${{ matrix.php }} - ${{ matrix.stability }} - ${{ matrix.os }}
+    name: "Test (PHP: ${{ matrix.php }} / ${{ matrix.stability }} / ${{ matrix.os }})"
 
     steps:
       - name: Checkout code
