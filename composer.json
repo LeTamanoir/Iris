@@ -15,17 +15,22 @@
         }
     ],
     "require": {
+        "ext-protobuf": "*",
         "php": "^8.3"
     },
     "require-dev": {
         "carthage-software/mago": "1.0.0-beta.25",
+        "google/protobuf": "^4.32",
         "pestphp/pest": "^4.1",
         "symfony/var-dumper": "^7.3"
     },
     "autoload": {
         "psr-4": {
             "Iris\\": "src"
-        }
+        },
+        "files": [
+            "src/Version.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
