@@ -16,6 +16,11 @@ class Client
      */
     private array $callOpts = [];
 
+    /**
+     * @var Interceptor[]
+     */
+    private array $interceptors = [];
+
     public function __construct(
         public string $host,
     ) {
@@ -27,21 +32,47 @@ class Client
         $this->callOpts = $opts;
     }
 
+    public function interceptors(Interceptor ...$interceptors): void
+    {
+        $this->interceptors = $interceptors;
+    }
+
     /**
-     * @template T of Message
-     *
-     * @param  T  $reply
-     * @return T|Error
+     * Performs the actual gRPC call with interceptors.
      */
-    public function invoke(string $method, Message $args, Message $reply, CallOption ...$opts): Message|Error
+    public function invoke(string $method, Message $args, Message $reply, CallOption ...$opts): null|Error
+    {
+        if (empty($this->interceptors)) {
+            return $this->doInvoke($method, $args, $reply, ...$opts);
+        }
+
+        $invoker = fn(string $method, Message $args, Message $reply, CallOption ...$opts) => $this->doInvoke(
+            $method,
+            $args,
+            $reply,
+            ...$opts,
+        );
+
+        foreach (array_reverse($this->interceptors) as $interceptor) {
+            $next = $invoker;
+            $invoker = fn(
+                string $method,
+                Message $args,
+                Message $reply,
+                CallOption ...$opts,
+            ) => $interceptor->intercept($method, $args, $reply, $next, ...$opts);
+        }
+
+        return $invoker($method, $args, $reply, ...$opts);
+    }
+
+    /**
+     * Performs the actual gRPC call without interceptors.
+     */
+    private function doInvoke(string $method, Message $args, Message $reply, CallOption ...$opts): null|Error
     {
         $info = new CallInfo();
-        foreach ($this->callOpts as $o) {
-            if ($err = $o->before($info)) {
-                return $err;
-            }
-        }
-        foreach ($opts as $o) {
+        foreach ([...$this->callOpts, ...$opts] as $o) {
             if ($err = $o->before($info)) {
                 return $err;
             }
@@ -65,10 +96,16 @@ class Client
                 CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
                 default => throw new \Exception('Unknown curl error (errno: ' . $errno . ', error: ' . $error . ')'),
             };
-            return new Error($code, $error);
+            $result = new Error($code, $error);
+        } else {
+            $result = $this->decodeReply($rawReply, $replyHdr, $reply);
         }
 
-        return $this->decodeReply($rawReply, $replyHdr, $reply);
+        foreach ([...$this->callOpts, ...$opts] as $o) {
+            $o->after($info);
+        }
+
+        return $result;
     }
 
     /**
@@ -171,12 +208,9 @@ class Client
     /**
      * Decode a gRPC reply message.
      *
-     * @template T of Message
      * @param  array<string, string>  $replyHdr
-     * @param  T  $reply
-     * @return T|Error
      */
-    private function decodeReply(string $rawReply, array $replyHdr, Message $reply): Message|Error
+    private function decodeReply(string $rawReply, array $replyHdr, Message $reply): null|Error
     {
         if (!array_key_exists('content-type', $replyHdr)) {
             return new Error(Code::Unknown, 'Missing content-type header');
@@ -209,6 +243,6 @@ class Client
             return new Error(Code::Internal, $e->getMessage());
         }
 
-        return $reply;
+        return null;
     }
 }

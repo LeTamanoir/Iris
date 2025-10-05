@@ -5,11 +5,12 @@ declare(strict_types=1);
 use Iris\CallInfo;
 use Iris\CallOption;
 use Iris\Code;
-use Iris\Duration;
 use Iris\Error;
 use Tests\Proto\DataTypes;
 use Tests\Proto\DelayRequest;
 use Tests\Proto\PBEmpty;
+
+use function Iris\timeout;
 
 describe('data transfer', function () {
     test('returns correct data', function () {
