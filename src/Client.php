@@ -79,6 +79,9 @@ class Client
         }
 
         $msg = $this->prepareMsg($args, $info->enc);
+        if ($msg instanceof Error) {
+            return $msg;
+        }
 
         /** @var array<string, string> */
         $replyHdr = [];
@@ -158,7 +161,7 @@ class Client
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
      */
-    private function prepareMsg(Message $args, Encoding $enc): string
+    private function prepareMsg(Message $args, Encoding $enc): string|Error
     {
         $binary = $args->serializeToString();
 
@@ -167,7 +170,13 @@ class Client
             $data = $binary;
         } else {
             $cFlag = 1;
-            $data = match ($enc) { Encoding::Gzip => gzencode($binary, 6) };
+            $data = match ($enc) {
+                Encoding::Gzip => gzencode($binary, 6) ?: new Error(Code::Unknown, 'Failed to encode gzip message'),
+            };
+        }
+
+        if ($data instanceof Error) {
+            return $data;
         }
 
         $header = pack('CN', $cFlag, strlen($data));
