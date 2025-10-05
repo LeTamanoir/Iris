@@ -26,18 +26,16 @@ if (!function_exists('timeout')) {
     /**
      * CallOption for setting the timeout for a call.
      */
-    function timeout(int|string $ms): CallOption
+    function timeout(int $ms): CallOption
     {
         return new class($ms) extends CallOption {
             public function __construct(
-                private int|string $ms,
+                private int $ms,
             ) {}
 
             public function before(CallInfo $info): null|Error
             {
-                $info->curlOpts[CURLOPT_TIMEOUT_MS] = is_string($this->ms)
-                    ? Duration::parse($this->ms) / Duration::Millisecond
-                    : $this->ms;
+                $info->curlOpts[CURLOPT_TIMEOUT_MS] = $this->ms;
                 return null;
             }
         };

@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 use Iris\CallInfo;
 use Iris\CallOption;
 use Iris\Code;
+use Iris\Duration;
 use Iris\Error;
 use Tests\Proto\DataTypes;
 use Tests\Proto\DelayRequest;
@@ -118,7 +121,7 @@ describe('timeout', function () {
         $request = new DelayRequest();
         $request->setMs(100);
 
-        $data = $client->GetDelayRequest($request, timeout('50ms'));
+        $data = $client->GetDelayRequest($request, timeout(50));
 
         expect($data)->toBeInstanceOf(Error::class);
         expect($data->code)->toBe(Code::DeadlineExceeded);
@@ -130,7 +133,7 @@ describe('timeout', function () {
         $request = new DelayRequest();
         $request->setMs(100);
 
-        $data = $client->GetDelayRequest($request, timeout('150ms'));
+        $data = $client->GetDelayRequest($request, timeout(150));
 
         expect($data)->not->toBeInstanceOf(Error::class);
         expect($data)->toBeInstanceOf(PBEmpty::class);
