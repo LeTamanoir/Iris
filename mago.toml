@@ -3,9 +3,8 @@
 php-version = "8.3.0"
 
 [source]
-paths = ["src", "tests"]
+paths = ["src"]
 includes = ["vendor"]
-excludes = ["tests/Proto"]
 
 [formatter]
 print-width = 120

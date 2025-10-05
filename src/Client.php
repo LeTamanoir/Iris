@@ -26,11 +26,15 @@ class Client
         //     $o($ctx);
         // }
 
-        $msg = $this->prepareMsg($ctx, $args);
+        $msg = $this->prepareMsg($args);
 
+        /** @var array<string, string> */
         $replyHdr = [];
         $ch = $this->setupHandle($ctx, $method, $msg, $replyHdr);
+        if ($ch instanceof Error)
+            return $ch;
 
+        /** @var string|false */
         $rawReply = curl_exec($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
@@ -48,9 +52,16 @@ class Client
         return $this->decodeReply($rawReply, $replyHdr, $reply);
     }
 
-    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): \CurlHandle
+    /**
+     * @param  array<string, string>  $replyHdr
+     */
+    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): \CurlHandle|Error
     {
         $ch = curl_init($this->host . $method);
+
+        if ($ch === false) {
+            return new Error(Code::Unknown, 'Failed to initialize curl handle');
+        }
 
         $headers = [
             'content-type: application/grpc',
@@ -93,7 +104,7 @@ class Client
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
      */
-    private function prepareMsg(CallCtx $ctx, Message $args): string
+    private function prepareMsg(Message $args): string
     {
         $binary = $args->serializeToString();
 
@@ -128,7 +139,7 @@ class Client
             return $data;
         }
 
-        throw new \Exception('Encoding not supported');
+        return new Error(Code::Unknown, 'Encoding not supported');
 
         // TODO: add encoding support
         // if ($enc === null) {
@@ -143,6 +154,11 @@ class Client
 
     /**
      * Decode a gRPC reply message.
+     *
+     * @template T of Message
+     * @param  array<string, string>  $replyHdr
+     * @param  T  $reply
+     * @return T|Error
      */
     private function decodeReply(string $rawReply, array $replyHdr, Message $reply): Message|Error
     {
