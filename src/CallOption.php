@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Iris;
 
 /**
- * Common call options for configuring gRPC calls.
+ * CallOption configures a Call before it starts or
+ * extracts information from a Call after it completes.
  */
 abstract class CallOption
 {

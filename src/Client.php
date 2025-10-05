@@ -11,10 +11,20 @@ class Client
 {
     private HandlePool $pool;
 
+    /**
+     * @var CallOption[]
+     */
+    private array $callOpts = [];
+
     public function __construct(
         public string $host,
     ) {
         $this->pool = new HandlePool(1);
+    }
+
+    public function globalOpts(CallOption ...$opts): void
+    {
+        $this->callOpts = $opts;
     }
 
     /**
@@ -23,13 +33,19 @@ class Client
      * @param  T  $reply
      * @return T|Error
      */
-    public function invoke(string $method, Message $args, Message $reply): Message|Error
+    public function invoke(string $method, Message $args, Message $reply, CallOption ...$opts): Message|Error
     {
         $ctx = new CallCtx();
-        // TODO: add call options
-        // foreach ($opts as $o) {
-        //     $o($ctx);
-        // }
+        foreach ($this->callOpts as $o) {
+            if ($err = $o->before($ctx)) {
+                return $err;
+            }
+        }
+        foreach ($opts as $o) {
+            if ($err = $o->before($ctx)) {
+                return $err;
+            }
+        }
 
         $msg = $this->prepareMsg($args);
 
