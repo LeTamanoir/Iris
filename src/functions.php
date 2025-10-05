@@ -21,9 +21,21 @@ function verbose(bool $verbose = true): CallOption
     };
 }
 
-/**
- * CallOption for setting the timeout for a call.
- */
+function encoding(Encoding $enc): CallOption
+{
+    return new class($enc) extends CallOption {
+        public function __construct(
+            private Encoding $enc,
+        ) {}
+
+        public function before(CallInfo $info): null|Error
+        {
+            $info->enc = $this->enc;
+            return null;
+        }
+    };
+}
+
 function timeout(int $ms): CallOption
 {
     return new class($ms) extends CallOption {

@@ -9,11 +9,10 @@ namespace Iris;
  */
 class CallInfo
 {
-    // TODO: add encoding support
-    // /**
-    //  * The encoding to use for the request.
-    //  */
-    // public null|Encoding $enc = null;
+    /**
+     * The encoding to use for the request.
+     */
+    public Encoding $enc = Encoding::Identity;
 
     /**
      * The curl options to use for the request.

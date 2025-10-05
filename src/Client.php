@@ -78,7 +78,7 @@ class Client
             }
         }
 
-        $msg = $this->prepareMsg($args);
+        $msg = $this->prepareMsg($args, $info->enc);
 
         /** @var array<string, string> */
         $replyHdr = [];
@@ -88,6 +88,10 @@ class Client
         $rawReply = curl_exec($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
+
+        $attempt = new CallAttempt();
+        $attempt->curlInfo = curl_getinfo($ch);
+
         $this->pool->release($ch);
 
         if ($rawReply === false) {
@@ -102,7 +106,7 @@ class Client
         }
 
         foreach ([...$this->callOpts, ...$opts] as $o) {
-            $o->after($info);
+            $o->after($info, $attempt);
         }
 
         return $result;
@@ -119,12 +123,9 @@ class Client
             'content-type: application/grpc',
             'user-agent: ' . $info->userAgent,
             'te: trailers',
+            'grpc-encoding: ' . $info->enc->value,
+            'grpc-accept-encoding: ' . Encoding::list(),
         ];
-        // TODO: add encoding support
-        // if ($ctx->enc !== null) {
-        //     $headers[] = 'grpc-encoding: ' . $ctx->enc->value;
-        //     $headers[] = 'grpc-accept-encoding: ' . Encoding::list();
-        // }
 
         $handleHdr = static function (\CurlHandle $_, string $h) use (&$replyHdr) {
             $l = trim($h);
@@ -157,21 +158,17 @@ class Client
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
      */
-    private function prepareMsg(Message $args): string
+    private function prepareMsg(Message $args, Encoding $enc): string
     {
         $binary = $args->serializeToString();
 
-        // if ($ctx->enc === null || $ctx->enc === Encoding::Identity) {
-        $cFlag = 0;
-        $data = $binary;
-        // } else {
-        // TODO: add encoding support
-        // $cFlag = 1;
-        // $data = match ($ctx->enc) {
-        //     Encoding::Gzip => gzencode($binary, 6),
-        //     Encoding::Deflate => gzcompress($binary, 6),
-        // };
-        // }
+        if ($enc === Encoding::Identity) {
+            $cFlag = 0;
+            $data = $binary;
+        } else {
+            $cFlag = 1;
+            $data = match ($enc) { Encoding::Gzip => gzencode($binary, 6) };
+        }
 
         $header = pack('CN', $cFlag, strlen($data));
         return $header . $data;
@@ -182,7 +179,7 @@ class Client
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
      */
-    private function decodeMsg(string $msg): string|Error
+    private function decodeMsg(string $msg, null|Encoding $enc): string|Error
     {
         $cFlag = unpack('C', $msg[0])[1];
         $data = substr($msg, 5);
@@ -192,17 +189,13 @@ class Client
             return $data;
         }
 
-        return new Error(Code::Unknown, 'Encoding not supported');
-
-        // TODO: add encoding support
-        // if ($enc === null) {
-        //     return new Error(Code::Unknown, 'Message is compressed but no encoding specified');
-        // }
-        // return match ($enc) {
-        //     Encoding::Identity => new Error(Code::Unknown, 'Message is compressed but encoding is identity'),
-        //     Encoding::Gzip => gzdecode($data),
-        //     Encoding::Deflate => gzuncompress($data),
-        // };
+        if ($enc === null) {
+            return new Error(Code::Unknown, 'Message is compressed but no encoding specified');
+        }
+        return match ($enc) {
+            Encoding::Identity => new Error(Code::Unknown, 'Message is compressed but encoding is identity'),
+            Encoding::Gzip => gzdecode($data) ?: new Error(Code::Unknown, 'Failed to decode gzip message'),
+        };
     }
 
     /**
@@ -230,9 +223,8 @@ class Client
             return new Error($code, $replyHdr['grpc-message'] ?? 'Unknown error');
         }
 
-        // $enc = Encoding::tryFrom($replyHdr['grpc-encoding'] ?? '');
-
-        $msg = $this->decodeMsg($rawReply);
+        $enc = Encoding::tryFrom($replyHdr['grpc-encoding'] ?? '');
+        $msg = $this->decodeMsg($rawReply, $enc);
         if ($msg instanceof Error) {
             return $msg;
         }

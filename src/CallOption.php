@@ -16,30 +16,10 @@ abstract class CallOption
         return null;
     }
 
-    public function after(CallInfo $info): void
+    public function after(CallInfo $info, CallAttempt $attempt): void
     {
         $info; // silence linter
+        $attempt; // silence linter
         return;
     }
-
-    // TODO: add encoding support
-    // public static function compress(Encoding $encoding): callable
-    // {
-    //     return fn(CallCtx $ctx) => $ctx->enc = $encoding;
-    // }
-    // public static function verbose(bool $verbose = true): callable
-    // {
-    //     return fn(CallCtx $ctx) => $ctx->curlOpts[CURLOPT_VERBOSE] = $verbose;
-    // }
-    // TODO: add timeout support
-    // public static function timeout(int $ms): callable
-    // {
-    //     return fn(CallCtx $ctx) => $ctx->curlOpts[CURLOPT_TIMEOUT_MS] = $ms;
-    // }
-    //
-    // TODO: switch param to int|string + add time parser
-    // public static function connectTimeout(int $ms): callable
-    // {
-    //     return fn(CallCtx $ctx) => $ctx->curlOpts[CURLOPT_CONNECTTIMEOUT_MS] = $ms;
-    // }
 }
