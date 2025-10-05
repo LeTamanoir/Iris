@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Iris\CallInfo;
 use Iris\CallOption;
 use Iris\Code;
-use Iris\Duration;
 use Iris\Error;
 use Tests\Proto\DataTypes;
 use Tests\Proto\DelayRequest;
