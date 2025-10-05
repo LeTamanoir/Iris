@@ -10,6 +10,8 @@ use Tests\Proto\DataTypes;
 use Tests\Proto\DelayRequest;
 use Tests\Proto\PBEmpty;
 
+use function Iris\timeout;
+
 describe('data transfer', function () {
     test('returns correct data', function () {
         $request = new DataTypes();

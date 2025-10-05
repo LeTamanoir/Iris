@@ -15,8 +15,9 @@
         }
     ],
     "require": {
+        "php": "^8.3",
         "ext-protobuf": "*",
-        "php": "^8.3"
+        "psr/log": "^3.0"
     },
     "require-dev": {
         "carthage-software/mago": "1.0.0-beta.25",

@@ -10,16 +10,19 @@ class TestClient extends \Iris\Client
 {
     public function GetDataTypes(DataTypes $request, CallOption ...$opts): DataTypes|\Iris\Error
     {
-        return $this->invoke('/test.TestService/GetDataTypes', $request, new DataTypes(), ...$opts);
+        $reply = new DataTypes();
+        return $this->invoke('/test.TestService/GetDataTypes', $request, $reply, ...$opts) ?? $reply;
     }
 
     public function GetEmpty(PBEmpty $request, CallOption ...$opts): PBEmpty|\Iris\Error
     {
-        return $this->invoke('/test.TestService/GetEmpty', $request, new PBEmpty(), ...$opts);
+        $reply = new PBEmpty();
+        return $this->invoke('/test.TestService/GetEmpty', $request, $reply, ...$opts) ?? $reply;
     }
 
     public function GetDelayRequest(DelayRequest $request, CallOption ...$opts): PBEmpty|\Iris\Error
     {
-        return $this->invoke('/test.TestService/GetDelayRequest', $request, new PBEmpty(), ...$opts);
+        $reply = new PBEmpty();
+        return $this->invoke('/test.TestService/GetDelayRequest', $request, $reply, ...$opts) ?? $reply;
     }
 }
