@@ -33,10 +33,12 @@ abstract class TestCase extends BaseTestCase
         }
 
         // Kill any existing process on port
-        exec("lsof -ti:{$port} | xargs kill -9", result_code: $code);
-        if ($code !== 0) {
-            fprintf(STDERR, "Failed to kill existing process on port {$port} (code: {$code})\n");
-            exit(1);
+        $activeProcId = exec("lsof -ti:{$port}");
+        if ($activeProcId) {
+            if (!posix_kill($activeProcId, SIGKILL)) {
+                fprintf(STDERR, "Failed to kill existing process on port {$port}\n");
+                exit(1);
+            }
         }
 
         // Start the test server in background
