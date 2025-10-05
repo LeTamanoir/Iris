@@ -33,7 +33,7 @@ abstract class TestCase extends BaseTestCase
         }
 
         // Kill any existing process on port
-        exec("lsof -ti:{$port} | xargs kill -9 2>/dev/null", result_code: $code);
+        exec("lsof -ti:{$port} | xargs kill -9", result_code: $code);
         if ($code !== 0) {
             fprintf(STDERR, "Failed to kill existing process on port {$port} (code: {$code})\n");
             exit(1);
