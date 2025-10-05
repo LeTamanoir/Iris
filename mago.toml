@@ -26,3 +26,4 @@ analyze-dead-code = false
 check-throws = true
 allow-possibly-undefined-array-keys = true
 perform-heuristic-checks = true
+ignore = ["missing-override-attribute"]
