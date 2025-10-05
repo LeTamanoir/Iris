@@ -98,5 +98,8 @@ jobs:
       - name: List Installed Dependencies
         run: composer show -D
 
+      - name: Build test server
+        run: composer build-test-server
+
       - name: Execute tests
         run: vendor/bin/pest --ci
