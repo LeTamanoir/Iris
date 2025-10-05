@@ -33,7 +33,7 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	log.Printf("Listening on http://localhost:%s", port)
+	proto.Log("Listening on http://localhost:%s", port)
 
 	if err := server.Serve(listener); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
