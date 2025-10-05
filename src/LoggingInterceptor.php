@@ -15,6 +15,9 @@ class LoggingInterceptor extends Interceptor
         private readonly \Psr\Log\LoggerInterface $logger,
     ) {}
 
+    /**
+     * @param callable(string,Message,Message,CallOption...): null|Error $invoker
+     */
     public function intercept(
         string $method,
         Message $args,
