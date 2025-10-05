@@ -10,9 +10,9 @@ use Google\Protobuf\Internal\GPBUtil;
 use Google\Protobuf\RepeatedField;
 
 /**
- * Generated from protobuf message <code>test.GetTestRequest</code>
+ * Generated from protobuf message <code>test.DataTypes</code>
  */
-class GetTestRequest extends \Google\Protobuf\Internal\Message
+class DataTypes extends \Google\Protobuf\Internal\Message
 {
     /**
      * Generated from protobuf field <code>string str_test = 1 [json_name = "strTest"];</code>

@@ -7,16 +7,12 @@ option php_metadata_namespace = "Tests\\Proto";
 option php_namespace = "Tests\\Proto";
 
 service TestService {
-  rpc GetTest(GetTestRequest) returns (GetTestRequest);
-  rpc EchoFast(EchoRequest) returns (EchoResponse);
-  rpc EchoSlow(EchoRequest) returns (EchoResponse);
-  rpc ReturnsInvalidArgument(Empty) returns (Empty);
-  rpc ReturnsNotFound(Empty) returns (Empty);
-  rpc ReturnsPermissionDenied(Empty) returns (Empty);
-  rpc ReturnsUnavailable(Empty) returns (Empty);
+  rpc GetDataTypes(DataTypes) returns (DataTypes);
+  rpc GetEmpty(Empty) returns (Empty);
+  rpc GetDelayRequest(DelayRequest) returns (Empty);
 }
 
-message GetTestRequest {
+message DataTypes {
   string str_test = 1;
   int32 int_test = 2;
   bool bool_test = 3;
@@ -28,10 +24,6 @@ message GetTestRequest {
 
 message Empty {}
 
-message EchoRequest {
-  string message = 1;
-}
-
-message EchoResponse {
-  string message = 1;
+message DelayRequest {
+  int32 ms = 1;
 }

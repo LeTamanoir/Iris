@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type GetTestRequest struct {
+type DataTypes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	StrTest       string                 `protobuf:"bytes,1,opt,name=str_test,json=strTest,proto3" json:"str_test,omitempty"`
 	IntTest       int32                  `protobuf:"varint,2,opt,name=int_test,json=intTest,proto3" json:"int_test,omitempty"`
@@ -34,20 +34,20 @@ type GetTestRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetTestRequest) Reset() {
-	*x = GetTestRequest{}
+func (x *DataTypes) Reset() {
+	*x = DataTypes{}
 	mi := &file_proto_test_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetTestRequest) String() string {
+func (x *DataTypes) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetTestRequest) ProtoMessage() {}
+func (*DataTypes) ProtoMessage() {}
 
-func (x *GetTestRequest) ProtoReflect() protoreflect.Message {
+func (x *DataTypes) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_test_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -59,54 +59,54 @@ func (x *GetTestRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetTestRequest.ProtoReflect.Descriptor instead.
-func (*GetTestRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DataTypes.ProtoReflect.Descriptor instead.
+func (*DataTypes) Descriptor() ([]byte, []int) {
 	return file_proto_test_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetTestRequest) GetStrTest() string {
+func (x *DataTypes) GetStrTest() string {
 	if x != nil {
 		return x.StrTest
 	}
 	return ""
 }
 
-func (x *GetTestRequest) GetIntTest() int32 {
+func (x *DataTypes) GetIntTest() int32 {
 	if x != nil {
 		return x.IntTest
 	}
 	return 0
 }
 
-func (x *GetTestRequest) GetBoolTest() bool {
+func (x *DataTypes) GetBoolTest() bool {
 	if x != nil {
 		return x.BoolTest
 	}
 	return false
 }
 
-func (x *GetTestRequest) GetFloatTest() float32 {
+func (x *DataTypes) GetFloatTest() float32 {
 	if x != nil {
 		return x.FloatTest
 	}
 	return 0
 }
 
-func (x *GetTestRequest) GetDoubleTest() float64 {
+func (x *DataTypes) GetDoubleTest() float64 {
 	if x != nil {
 		return x.DoubleTest
 	}
 	return 0
 }
 
-func (x *GetTestRequest) GetBytesTest() []byte {
+func (x *DataTypes) GetBytesTest() []byte {
 	if x != nil {
 		return x.BytesTest
 	}
 	return nil
 }
 
-func (x *GetTestRequest) GetMapTest() map[string]string {
+func (x *DataTypes) GetMapTest() map[string]string {
 	if x != nil {
 		return x.MapTest
 	}
@@ -149,27 +149,27 @@ func (*Empty) Descriptor() ([]byte, []int) {
 	return file_proto_test_proto_rawDescGZIP(), []int{1}
 }
 
-type EchoRequest struct {
+type DelayRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Ms            int32                  `protobuf:"varint,1,opt,name=ms,proto3" json:"ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EchoRequest) Reset() {
-	*x = EchoRequest{}
+func (x *DelayRequest) Reset() {
+	*x = DelayRequest{}
 	mi := &file_proto_test_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EchoRequest) String() string {
+func (x *DelayRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EchoRequest) ProtoMessage() {}
+func (*DelayRequest) ProtoMessage() {}
 
-func (x *EchoRequest) ProtoReflect() protoreflect.Message {
+func (x *DelayRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_test_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -181,68 +181,24 @@ func (x *EchoRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EchoRequest.ProtoReflect.Descriptor instead.
-func (*EchoRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DelayRequest.ProtoReflect.Descriptor instead.
+func (*DelayRequest) Descriptor() ([]byte, []int) {
 	return file_proto_test_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *EchoRequest) GetMessage() string {
+func (x *DelayRequest) GetMs() int32 {
 	if x != nil {
-		return x.Message
+		return x.Ms
 	}
-	return ""
-}
-
-type EchoResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EchoResponse) Reset() {
-	*x = EchoResponse{}
-	mi := &file_proto_test_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EchoResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EchoResponse) ProtoMessage() {}
-
-func (x *EchoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_test_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EchoResponse.ProtoReflect.Descriptor instead.
-func (*EchoResponse) Descriptor() ([]byte, []int) {
-	return file_proto_test_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *EchoResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
+	return 0
 }
 
 var File_proto_test_proto protoreflect.FileDescriptor
 
 const file_proto_test_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/test.proto\x12\x04test\"\xbc\x02\n" +
-	"\x0eGetTestRequest\x12\x19\n" +
+	"\x10proto/test.proto\x12\x04test\"\xb2\x02\n" +
+	"\tDataTypes\x12\x19\n" +
 	"\bstr_test\x18\x01 \x01(\tR\astrTest\x12\x19\n" +
 	"\bint_test\x18\x02 \x01(\x05R\aintTest\x12\x1b\n" +
 	"\tbool_test\x18\x03 \x01(\bR\bboolTest\x12\x1d\n" +
@@ -251,24 +207,18 @@ const file_proto_test_proto_rawDesc = "" +
 	"\vdouble_test\x18\x05 \x01(\x01R\n" +
 	"doubleTest\x12\x1d\n" +
 	"\n" +
-	"bytes_test\x18\x06 \x01(\fR\tbytesTest\x12<\n" +
-	"\bmap_test\x18\a \x03(\v2!.test.GetTestRequest.MapTestEntryR\amapTest\x1a:\n" +
+	"bytes_test\x18\x06 \x01(\fR\tbytesTest\x127\n" +
+	"\bmap_test\x18\a \x03(\v2\x1c.test.DataTypes.MapTestEntryR\amapTest\x1a:\n" +
 	"\fMapTestEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\a\n" +
-	"\x05Empty\"'\n" +
-	"\vEchoRequest\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"(\n" +
-	"\fEchoResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xf0\x02\n" +
-	"\vTestService\x125\n" +
-	"\aGetTest\x12\x14.test.GetTestRequest\x1a\x14.test.GetTestRequest\x121\n" +
-	"\bEchoFast\x12\x11.test.EchoRequest\x1a\x12.test.EchoResponse\x121\n" +
-	"\bEchoSlow\x12\x11.test.EchoRequest\x1a\x12.test.EchoResponse\x122\n" +
-	"\x16ReturnsInvalidArgument\x12\v.test.Empty\x1a\v.test.Empty\x12+\n" +
-	"\x0fReturnsNotFound\x12\v.test.Empty\x1a\v.test.Empty\x123\n" +
-	"\x17ReturnsPermissionDenied\x12\v.test.Empty\x1a\v.test.Empty\x12.\n" +
-	"\x12ReturnsUnavailable\x12\v.test.Empty\x1a\v.test.EmptyBJZ,github.com/letamanoir/iris/test-server/proto\xca\x02\vTests\\Proto\xe2\x02\vTests\\Protob\x06proto3"
+	"\x05Empty\"\x1e\n" +
+	"\fDelayRequest\x12\x0e\n" +
+	"\x02ms\x18\x01 \x01(\x05R\x02ms2\x99\x01\n" +
+	"\vTestService\x120\n" +
+	"\fGetDataTypes\x12\x0f.test.DataTypes\x1a\x0f.test.DataTypes\x12$\n" +
+	"\bGetEmpty\x12\v.test.Empty\x1a\v.test.Empty\x122\n" +
+	"\x0fGetDelayRequest\x12\x12.test.DelayRequest\x1a\v.test.EmptyBJZ,github.com/letamanoir/iris/test-server/proto\xca\x02\vTests\\Proto\xe2\x02\vTests\\Protob\x06proto3"
 
 var (
 	file_proto_test_proto_rawDescOnce sync.Once
@@ -282,32 +232,23 @@ func file_proto_test_proto_rawDescGZIP() []byte {
 	return file_proto_test_proto_rawDescData
 }
 
-var file_proto_test_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_test_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_test_proto_goTypes = []any{
-	(*GetTestRequest)(nil), // 0: test.GetTestRequest
-	(*Empty)(nil),          // 1: test.Empty
-	(*EchoRequest)(nil),    // 2: test.EchoRequest
-	(*EchoResponse)(nil),   // 3: test.EchoResponse
-	nil,                    // 4: test.GetTestRequest.MapTestEntry
+	(*DataTypes)(nil),    // 0: test.DataTypes
+	(*Empty)(nil),        // 1: test.Empty
+	(*DelayRequest)(nil), // 2: test.DelayRequest
+	nil,                  // 3: test.DataTypes.MapTestEntry
 }
 var file_proto_test_proto_depIdxs = []int32{
-	4, // 0: test.GetTestRequest.map_test:type_name -> test.GetTestRequest.MapTestEntry
-	0, // 1: test.TestService.GetTest:input_type -> test.GetTestRequest
-	2, // 2: test.TestService.EchoFast:input_type -> test.EchoRequest
-	2, // 3: test.TestService.EchoSlow:input_type -> test.EchoRequest
-	1, // 4: test.TestService.ReturnsInvalidArgument:input_type -> test.Empty
-	1, // 5: test.TestService.ReturnsNotFound:input_type -> test.Empty
-	1, // 6: test.TestService.ReturnsPermissionDenied:input_type -> test.Empty
-	1, // 7: test.TestService.ReturnsUnavailable:input_type -> test.Empty
-	0, // 8: test.TestService.GetTest:output_type -> test.GetTestRequest
-	3, // 9: test.TestService.EchoFast:output_type -> test.EchoResponse
-	3, // 10: test.TestService.EchoSlow:output_type -> test.EchoResponse
-	1, // 11: test.TestService.ReturnsInvalidArgument:output_type -> test.Empty
-	1, // 12: test.TestService.ReturnsNotFound:output_type -> test.Empty
-	1, // 13: test.TestService.ReturnsPermissionDenied:output_type -> test.Empty
-	1, // 14: test.TestService.ReturnsUnavailable:output_type -> test.Empty
-	8, // [8:15] is the sub-list for method output_type
-	1, // [1:8] is the sub-list for method input_type
+	3, // 0: test.DataTypes.map_test:type_name -> test.DataTypes.MapTestEntry
+	0, // 1: test.TestService.GetDataTypes:input_type -> test.DataTypes
+	1, // 2: test.TestService.GetEmpty:input_type -> test.Empty
+	2, // 3: test.TestService.GetDelayRequest:input_type -> test.DelayRequest
+	0, // 4: test.TestService.GetDataTypes:output_type -> test.DataTypes
+	1, // 5: test.TestService.GetEmpty:output_type -> test.Empty
+	1, // 6: test.TestService.GetDelayRequest:output_type -> test.Empty
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -324,7 +265,7 @@ func file_proto_test_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_test_proto_rawDesc), len(file_proto_test_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
