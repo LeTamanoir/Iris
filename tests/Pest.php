@@ -47,7 +47,7 @@ function serializeMsg(\Google\Protobuf\Internal\Message $msg): string
     );
 }
 
-function client(): \Tests\Proto\TestClient
+function testClient(): \Tests\Proto\TestClient
 {
     $port = getenv('TEST_SERVER_PORT');
     return new \Tests\Proto\TestClient("localhost:{$port}");
