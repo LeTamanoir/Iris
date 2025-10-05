@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package test;
+
+option go_package = "github.com/letamanoir/iris/test-server/proto";
+option php_metadata_namespace = "Tests\\Proto";
+option php_namespace = "Tests\\Proto";
+
+service TestService {
+  rpc GetTest(GetTestRequest) returns (GetTestRequest);
+  rpc EchoFast(EchoRequest) returns (EchoResponse);
+  rpc EchoSlow(EchoRequest) returns (EchoResponse);
+  rpc ReturnsInvalidArgument(Empty) returns (Empty);
+  rpc ReturnsNotFound(Empty) returns (Empty);
+  rpc ReturnsPermissionDenied(Empty) returns (Empty);
+  rpc ReturnsUnavailable(Empty) returns (Empty);
+}
+
+message GetTestRequest {
+  string str_test = 1;
+  int32 int_test = 2;
+  bool bool_test = 3;
+  float float_test = 4;
+  double double_test = 5;
+  bytes bytes_test = 6;
+  map<string, string> map_test = 7;
+}
+
+message Empty {}
+
+message EchoRequest {
+  string message = 1;
+}
+
+message EchoResponse {
+  string message = 1;
+}
