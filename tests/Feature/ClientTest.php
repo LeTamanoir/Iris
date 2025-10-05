@@ -112,30 +112,30 @@ describe('call options', function () {
 
         expect($calledCount)->toBe(2);
     });
-});
 
-describe('timeout', function () {
-    test('times out after the specified timeout', function () {
-        $client = testClient();
+    describe('timeout', function () {
+        test('times out after the specified timeout', function () {
+            $client = testClient();
 
-        $request = new DelayRequest();
-        $request->setMs(100);
+            $request = new DelayRequest();
+            $request->setMs(100);
 
-        $data = $client->GetDelayRequest($request, timeout(50));
+            $data = $client->GetDelayRequest($request, timeout(50));
 
-        expect($data)->toBeInstanceOf(Error::class);
-        expect($data->code)->toBe(Code::DeadlineExceeded);
-    });
+            expect($data)->toBeInstanceOf(Error::class);
+            expect($data->code)->toBe(Code::DeadlineExceeded);
+        });
 
-    test('does not time out before the specified timeout', function () {
-        $client = testClient();
+        test('does not time out before the specified timeout', function () {
+            $client = testClient();
 
-        $request = new DelayRequest();
-        $request->setMs(100);
+            $request = new DelayRequest();
+            $request->setMs(100);
 
-        $data = $client->GetDelayRequest($request, timeout(150));
+            $data = $client->GetDelayRequest($request, timeout(150));
 
-        expect($data)->not->toBeInstanceOf(Error::class);
-        expect($data)->toBeInstanceOf(PBEmpty::class);
+            expect($data)->not->toBeInstanceOf(Error::class);
+            expect($data)->toBeInstanceOf(PBEmpty::class);
+        });
     });
 });
