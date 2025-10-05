@@ -1,6 +1,7 @@
 <?php
 
 use Iris\CallCtx;
+use Iris\CallInfo;
 use Iris\CallOption;
 use Iris\Error;
 use Tests\Proto\EchoRequest;
@@ -35,7 +36,7 @@ describe('call options', function () {
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
@@ -62,7 +63,7 @@ describe('call options', function () {
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
@@ -84,7 +85,7 @@ describe('call options', function () {
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
@@ -98,7 +99,7 @@ describe('call options', function () {
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;

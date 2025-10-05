@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Iris;
 
 /**
- * Mutable context for configuring a gRPC call.
+ * Mutable information for configuring a gRPC call.
  */
-class CallCtx
+class CallInfo
 {
     // TODO: add encoding support
     // /**

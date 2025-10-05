@@ -10,15 +10,15 @@ namespace Iris;
  */
 abstract class CallOption
 {
-    public function before(CallCtx $ctx): null|Error
+    public function before(CallInfo $info): null|Error
     {
-        $ctx;
+        $info; // silence linter
         return null;
     }
 
-    public function after(CallCtx $ctx): void
+    public function after(CallInfo $info): void
     {
-        $ctx;
+        $info; // silence linter
         return;
     }
 
