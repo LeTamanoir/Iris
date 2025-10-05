@@ -1,14 +1,19 @@
 <?php
 
-use Iris\CallCtx;
+declare(strict_types=1);
+
+use Iris\CallInfo;
 use Iris\CallOption;
+use Iris\Code;
+use Iris\Duration;
 use Iris\Error;
-use Tests\Proto\EchoRequest;
-use Tests\Proto\GetTestRequest;
+use Tests\Proto\DataTypes;
+use Tests\Proto\DelayRequest;
+use Tests\Proto\PBEmpty;
 
 describe('data transfer', function () {
     test('returns correct data', function () {
-        $request = new GetTestRequest();
+        $request = new DataTypes();
         $request->setStrTest('test');
         $request->setIntTest(42);
         $request->setBoolTest(true);
@@ -17,7 +22,7 @@ describe('data transfer', function () {
         $request->setBytesTest('bytes');
         $request->setMapTest(['key' => 'value']);
 
-        $response = testClient()->GetTest($request);
+        $response = testClient()->GetDataTypes($request);
 
         expect($response)->not->toBeInstanceOf(Error::class);
         expect(serializeMsg($response))->toBe(serializeMsg($request));
@@ -35,17 +40,17 @@ describe('call options', function () {
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
             }
         });
 
-        $request = new EchoRequest();
+        $request = new PBEmpty();
 
-        $client->EchoFast($request);
-        $client->EchoFast($request);
+        $client->GetEmpty($request);
+        $client->GetEmpty($request);
 
         expect($calledCount)->toBe(2);
     });
@@ -55,21 +60,21 @@ describe('call options', function () {
 
         $calledCount = 0;
 
-        $request = new EchoRequest();
+        $request = new PBEmpty();
 
-        $client->EchoFast($request, new class($calledCount) extends CallOption {
+        $client->GetEmpty($request, new class($calledCount) extends CallOption {
             public function __construct(
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
             }
         });
 
-        $client->EchoFast($request);
+        $client->GetEmpty($request);
 
         expect($calledCount)->toBe(1);
     });
@@ -84,21 +89,21 @@ describe('call options', function () {
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
             }
         });
 
-        $request = new EchoRequest();
+        $request = new PBEmpty();
 
-        $client->EchoFast($request, new class($calledCount) extends CallOption {
+        $client->GetEmpty($request, new class($calledCount) extends CallOption {
             public function __construct(
                 private int &$calledCount,
             ) {}
 
-            public function before(CallCtx $ctx): null|Error
+            public function before(CallInfo $info): null|Error
             {
                 $this->calledCount++;
                 return null;
@@ -106,5 +111,31 @@ describe('call options', function () {
         });
 
         expect($calledCount)->toBe(2);
+    });
+
+    describe('timeout', function () {
+        test('times out after the specified timeout', function () {
+            $client = testClient();
+
+            $request = new DelayRequest();
+            $request->setMs(100);
+
+            $data = $client->GetDelayRequest($request, timeout(50));
+
+            expect($data)->toBeInstanceOf(Error::class);
+            expect($data->code)->toBe(Code::DeadlineExceeded);
+        });
+
+        test('does not time out before the specified timeout', function () {
+            $client = testClient();
+
+            $request = new DelayRequest();
+            $request->setMs(100);
+
+            $data = $client->GetDelayRequest($request, timeout(150));
+
+            expect($data)->not->toBeInstanceOf(Error::class);
+            expect($data)->toBeInstanceOf(PBEmpty::class);
+        });
     });
 });

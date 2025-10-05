@@ -35,14 +35,14 @@ class Client
      */
     public function invoke(string $method, Message $args, Message $reply, CallOption ...$opts): Message|Error
     {
-        $ctx = new CallCtx();
+        $info = new CallInfo();
         foreach ($this->callOpts as $o) {
-            if ($err = $o->before($ctx)) {
+            if ($err = $o->before($info)) {
                 return $err;
             }
         }
         foreach ($opts as $o) {
-            if ($err = $o->before($ctx)) {
+            if ($err = $o->before($info)) {
                 return $err;
             }
         }
@@ -51,7 +51,7 @@ class Client
 
         /** @var array<string, string> */
         $replyHdr = [];
-        $ch = $this->setupHandle($ctx, $method, $msg, $replyHdr);
+        $ch = $this->setupHandle($info, $method, $msg, $replyHdr);
 
         /** @var string|false */
         $rawReply = curl_exec($ch);
@@ -74,13 +74,13 @@ class Client
     /**
      * @param  array<string, string>  $replyHdr
      */
-    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): CurlHandle
+    private function setupHandle(CallInfo $info, string $method, string $msg, array &$replyHdr): CurlHandle
     {
         $ch = $this->pool->aquire();
 
         $headers = [
             'content-type: application/grpc',
-            'user-agent: ' . $ctx->userAgent,
+            'user-agent: ' . $info->userAgent,
             'te: trailers',
         ];
         // TODO: add encoding support
@@ -98,7 +98,7 @@ class Client
             return strlen($h);
         };
 
-        foreach ($ctx->curlOpts as $k => $v) {
+        foreach ($info->curlOpts as $k => $v) {
             curl_setopt($ch, $k, $v);
         }
 

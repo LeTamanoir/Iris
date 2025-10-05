@@ -8,38 +8,18 @@ use Iris\CallOption;
 
 class TestClient extends \Iris\Client
 {
-    public function GetTest(GetTestRequest $request, CallOption ...$opts): GetTestRequest|\Iris\Error
+    public function GetDataTypes(DataTypes $request, CallOption ...$opts): DataTypes|\Iris\Error
     {
-        return $this->invoke('/test.TestService/GetTest', $request, new GetTestRequest(), ...$opts);
+        return $this->invoke('/test.TestService/GetDataTypes', $request, new DataTypes(), ...$opts);
     }
 
-    public function EchoFast(EchoRequest $request, CallOption ...$opts): EchoResponse|\Iris\Error
+    public function GetEmpty(PBEmpty $request, CallOption ...$opts): PBEmpty|\Iris\Error
     {
-        return $this->invoke('/test.TestService/EchoFast', $request, new EchoResponse(), ...$opts);
+        return $this->invoke('/test.TestService/GetEmpty', $request, new PBEmpty(), ...$opts);
     }
 
-    public function EchoSlow(EchoRequest $request, CallOption ...$opts): EchoResponse|\Iris\Error
+    public function GetDelayRequest(DelayRequest $request, CallOption ...$opts): PBEmpty|\Iris\Error
     {
-        return $this->invoke('/test.TestService/EchoSlow', $request, new EchoResponse(), ...$opts);
-    }
-
-    public function ReturnsInvalidArgument(PBEmpty $request, CallOption ...$opts): PBEmpty|\Iris\Error
-    {
-        return $this->invoke('/test.TestService/ReturnsInvalidArgument', $request, new PBEmpty(), ...$opts);
-    }
-
-    public function ReturnsNotFound(PBEmpty $request, CallOption ...$opts): PBEmpty|\Iris\Error
-    {
-        return $this->invoke('/test.TestService/ReturnsNotFound', $request, new PBEmpty(), ...$opts);
-    }
-
-    public function ReturnsPermissionDenied(PBEmpty $request, CallOption ...$opts): PBEmpty|\Iris\Error
-    {
-        return $this->invoke('/test.TestService/ReturnsPermissionDenied', $request, new PBEmpty(), ...$opts);
-    }
-
-    public function ReturnsUnavailable(PBEmpty $request, CallOption ...$opts): PBEmpty|\Iris\Error
-    {
-        return $this->invoke('/test.TestService/ReturnsUnavailable', $request, new PBEmpty(), ...$opts);
+        return $this->invoke('/test.TestService/GetDelayRequest', $request, new PBEmpty(), ...$opts);
     }
 }

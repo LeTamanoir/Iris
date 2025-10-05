@@ -19,26 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TestService_GetTest_FullMethodName                 = "/test.TestService/GetTest"
-	TestService_EchoFast_FullMethodName                = "/test.TestService/EchoFast"
-	TestService_EchoSlow_FullMethodName                = "/test.TestService/EchoSlow"
-	TestService_ReturnsInvalidArgument_FullMethodName  = "/test.TestService/ReturnsInvalidArgument"
-	TestService_ReturnsNotFound_FullMethodName         = "/test.TestService/ReturnsNotFound"
-	TestService_ReturnsPermissionDenied_FullMethodName = "/test.TestService/ReturnsPermissionDenied"
-	TestService_ReturnsUnavailable_FullMethodName      = "/test.TestService/ReturnsUnavailable"
+	TestService_GetDataTypes_FullMethodName    = "/test.TestService/GetDataTypes"
+	TestService_GetEmpty_FullMethodName        = "/test.TestService/GetEmpty"
+	TestService_GetDelayRequest_FullMethodName = "/test.TestService/GetDelayRequest"
 )
 
 // TestServiceClient is the client API for TestService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TestServiceClient interface {
-	GetTest(ctx context.Context, in *GetTestRequest, opts ...grpc.CallOption) (*GetTestRequest, error)
-	EchoFast(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
-	EchoSlow(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
-	ReturnsInvalidArgument(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
-	ReturnsNotFound(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
-	ReturnsPermissionDenied(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
-	ReturnsUnavailable(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	GetDataTypes(ctx context.Context, in *DataTypes, opts ...grpc.CallOption) (*DataTypes, error)
+	GetEmpty(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	GetDelayRequest(ctx context.Context, in *DelayRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type testServiceClient struct {
@@ -49,70 +41,30 @@ func NewTestServiceClient(cc grpc.ClientConnInterface) TestServiceClient {
 	return &testServiceClient{cc}
 }
 
-func (c *testServiceClient) GetTest(ctx context.Context, in *GetTestRequest, opts ...grpc.CallOption) (*GetTestRequest, error) {
+func (c *testServiceClient) GetDataTypes(ctx context.Context, in *DataTypes, opts ...grpc.CallOption) (*DataTypes, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetTestRequest)
-	err := c.cc.Invoke(ctx, TestService_GetTest_FullMethodName, in, out, cOpts...)
+	out := new(DataTypes)
+	err := c.cc.Invoke(ctx, TestService_GetDataTypes_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *testServiceClient) EchoFast(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EchoResponse)
-	err := c.cc.Invoke(ctx, TestService_EchoFast_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *testServiceClient) EchoSlow(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EchoResponse)
-	err := c.cc.Invoke(ctx, TestService_EchoSlow_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *testServiceClient) ReturnsInvalidArgument(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+func (c *testServiceClient) GetEmpty(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, TestService_ReturnsInvalidArgument_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, TestService_GetEmpty_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *testServiceClient) ReturnsNotFound(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+func (c *testServiceClient) GetDelayRequest(ctx context.Context, in *DelayRequest, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, TestService_ReturnsNotFound_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *testServiceClient) ReturnsPermissionDenied(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, TestService_ReturnsPermissionDenied_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *testServiceClient) ReturnsUnavailable(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, TestService_ReturnsUnavailable_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, TestService_GetDelayRequest_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -123,13 +75,9 @@ func (c *testServiceClient) ReturnsUnavailable(ctx context.Context, in *Empty, o
 // All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility.
 type TestServiceServer interface {
-	GetTest(context.Context, *GetTestRequest) (*GetTestRequest, error)
-	EchoFast(context.Context, *EchoRequest) (*EchoResponse, error)
-	EchoSlow(context.Context, *EchoRequest) (*EchoResponse, error)
-	ReturnsInvalidArgument(context.Context, *Empty) (*Empty, error)
-	ReturnsNotFound(context.Context, *Empty) (*Empty, error)
-	ReturnsPermissionDenied(context.Context, *Empty) (*Empty, error)
-	ReturnsUnavailable(context.Context, *Empty) (*Empty, error)
+	GetDataTypes(context.Context, *DataTypes) (*DataTypes, error)
+	GetEmpty(context.Context, *Empty) (*Empty, error)
+	GetDelayRequest(context.Context, *DelayRequest) (*Empty, error)
 	mustEmbedUnimplementedTestServiceServer()
 }
 
@@ -140,26 +88,14 @@ type TestServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedTestServiceServer struct{}
 
-func (UnimplementedTestServiceServer) GetTest(context.Context, *GetTestRequest) (*GetTestRequest, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTest not implemented")
+func (UnimplementedTestServiceServer) GetDataTypes(context.Context, *DataTypes) (*DataTypes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDataTypes not implemented")
 }
-func (UnimplementedTestServiceServer) EchoFast(context.Context, *EchoRequest) (*EchoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EchoFast not implemented")
+func (UnimplementedTestServiceServer) GetEmpty(context.Context, *Empty) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEmpty not implemented")
 }
-func (UnimplementedTestServiceServer) EchoSlow(context.Context, *EchoRequest) (*EchoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EchoSlow not implemented")
-}
-func (UnimplementedTestServiceServer) ReturnsInvalidArgument(context.Context, *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReturnsInvalidArgument not implemented")
-}
-func (UnimplementedTestServiceServer) ReturnsNotFound(context.Context, *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReturnsNotFound not implemented")
-}
-func (UnimplementedTestServiceServer) ReturnsPermissionDenied(context.Context, *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReturnsPermissionDenied not implemented")
-}
-func (UnimplementedTestServiceServer) ReturnsUnavailable(context.Context, *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReturnsUnavailable not implemented")
+func (UnimplementedTestServiceServer) GetDelayRequest(context.Context, *DelayRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDelayRequest not implemented")
 }
 func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 func (UnimplementedTestServiceServer) testEmbeddedByValue()                     {}
@@ -182,128 +118,56 @@ func RegisterTestServiceServer(s grpc.ServiceRegistrar, srv TestServiceServer) {
 	s.RegisterService(&TestService_ServiceDesc, srv)
 }
 
-func _TestService_GetTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTestRequest)
+func _TestService_GetDataTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataTypes)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TestServiceServer).GetTest(ctx, in)
+		return srv.(TestServiceServer).GetDataTypes(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: TestService_GetTest_FullMethodName,
+		FullMethod: TestService_GetDataTypes_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).GetTest(ctx, req.(*GetTestRequest))
+		return srv.(TestServiceServer).GetDataTypes(ctx, req.(*DataTypes))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TestService_EchoFast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EchoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TestServiceServer).EchoFast(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TestService_EchoFast_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).EchoFast(ctx, req.(*EchoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TestService_EchoSlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EchoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TestServiceServer).EchoSlow(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TestService_EchoSlow_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).EchoSlow(ctx, req.(*EchoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TestService_ReturnsInvalidArgument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _TestService_GetEmpty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TestServiceServer).ReturnsInvalidArgument(ctx, in)
+		return srv.(TestServiceServer).GetEmpty(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: TestService_ReturnsInvalidArgument_FullMethodName,
+		FullMethod: TestService_GetEmpty_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).ReturnsInvalidArgument(ctx, req.(*Empty))
+		return srv.(TestServiceServer).GetEmpty(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TestService_ReturnsNotFound_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+func _TestService_GetDelayRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelayRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TestServiceServer).ReturnsNotFound(ctx, in)
+		return srv.(TestServiceServer).GetDelayRequest(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: TestService_ReturnsNotFound_FullMethodName,
+		FullMethod: TestService_GetDelayRequest_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).ReturnsNotFound(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TestService_ReturnsPermissionDenied_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TestServiceServer).ReturnsPermissionDenied(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TestService_ReturnsPermissionDenied_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).ReturnsPermissionDenied(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TestService_ReturnsUnavailable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TestServiceServer).ReturnsUnavailable(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TestService_ReturnsUnavailable_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).ReturnsUnavailable(ctx, req.(*Empty))
+		return srv.(TestServiceServer).GetDelayRequest(ctx, req.(*DelayRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -316,32 +180,16 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TestServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetTest",
-			Handler:    _TestService_GetTest_Handler,
+			MethodName: "GetDataTypes",
+			Handler:    _TestService_GetDataTypes_Handler,
 		},
 		{
-			MethodName: "EchoFast",
-			Handler:    _TestService_EchoFast_Handler,
+			MethodName: "GetEmpty",
+			Handler:    _TestService_GetEmpty_Handler,
 		},
 		{
-			MethodName: "EchoSlow",
-			Handler:    _TestService_EchoSlow_Handler,
-		},
-		{
-			MethodName: "ReturnsInvalidArgument",
-			Handler:    _TestService_ReturnsInvalidArgument_Handler,
-		},
-		{
-			MethodName: "ReturnsNotFound",
-			Handler:    _TestService_ReturnsNotFound_Handler,
-		},
-		{
-			MethodName: "ReturnsPermissionDenied",
-			Handler:    _TestService_ReturnsPermissionDenied_Handler,
-		},
-		{
-			MethodName: "ReturnsUnavailable",
-			Handler:    _TestService_ReturnsUnavailable_Handler,
+			MethodName: "GetDelayRequest",
+			Handler:    _TestService_GetDelayRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
