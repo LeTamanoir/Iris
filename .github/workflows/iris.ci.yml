@@ -103,3 +103,5 @@ jobs:
 
       - name: Execute tests
         run: vendor/bin/pest --ci
+        env:
+          TEST_VERBOSE: "1"
