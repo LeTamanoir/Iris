@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace Iris;
 
+use CurlHandle;
 use Google\Protobuf\Internal\Message;
 
 class Client
 {
+    private HandlePool $pool;
+
     public function __construct(
         public string $host,
-    ) {}
+    ) {
+        $this->pool = new HandlePool(1);
+    }
 
     /**
      * @template T of Message
@@ -31,14 +36,12 @@ class Client
         /** @var array<string, string> */
         $replyHdr = [];
         $ch = $this->setupHandle($ctx, $method, $msg, $replyHdr);
-        if ($ch instanceof Error)
-            return $ch;
 
         /** @var string|false */
         $rawReply = curl_exec($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
-        curl_close($ch);
+        $this->pool->release($ch);
 
         if ($rawReply === false) {
             $code = match ($errno) {
@@ -55,13 +58,9 @@ class Client
     /**
      * @param  array<string, string>  $replyHdr
      */
-    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): \CurlHandle|Error
+    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): CurlHandle
     {
-        $ch = curl_init($this->host . $method);
-
-        if ($ch === false) {
-            return new Error(Code::Unknown, 'Failed to initialize curl handle');
-        }
+        $ch = $this->pool->aquire();
 
         $headers = [
             'content-type: application/grpc',
@@ -88,6 +87,7 @@ class Client
         }
 
         curl_setopt_array($ch, [
+            CURLOPT_URL => $this->host . $method,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POSTFIELDS => $msg,
