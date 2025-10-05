@@ -38,7 +38,12 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/pest",
+        "proto-gen": "cd test-server && buf generate",
+        "build-test-server": "cd test-server && go build -o testserver .",
+        "test": [
+            "@build-test-server",
+            "vendor/bin/pest"
+        ],
         "test-coverage": "vendor/bin/pest --coverage",
         "format": "vendor/bin/mago format",
         "lint": "vendor/bin/mago analyze"
