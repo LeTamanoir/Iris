@@ -42,25 +42,11 @@ class Client
      */
     public function invoke(string $method, Message $args, Message $reply, CallOption ...$opts): null|Error
     {
-        if (empty($this->interceptors)) {
-            return $this->doInvoke($method, $args, $reply, ...$opts);
-        }
+        $invoker = fn(string $m, Message $a, Message $r, CallOption ...$o) => $this->doInvoke($m, $a, $r, ...$o);
 
-        $invoker = fn(string $method, Message $args, Message $reply, CallOption ...$opts) => $this->doInvoke(
-            $method,
-            $args,
-            $reply,
-            ...$opts,
-        );
-
-        foreach (array_reverse($this->interceptors) as $interceptor) {
-            $next = $invoker;
-            $invoker = fn(
-                string $method,
-                Message $args,
-                Message $reply,
-                CallOption ...$opts,
-            ) => $interceptor->intercept($method, $args, $reply, $next, ...$opts);
+        foreach (array_reverse($this->interceptors) as $i) {
+            $n = $invoker;
+            $invoker = fn(string $m, Message $a, Message $r, CallOption ...$o) => $i->intercept($m, $a, $r, $n, ...$o);
         }
 
         return $invoker($method, $args, $reply, ...$opts);
