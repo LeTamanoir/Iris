@@ -45,6 +45,8 @@ class Client
 
     /**
      * Returns a new client with the given curl options.
+     *
+     * @param  array<int, mixed>  $curlOpts
      */
     public function curlOpts(array $curlOpts): static
     {
@@ -65,6 +67,8 @@ class Client
 
     /**
      * Returns a new client with the given metadata.
+     *
+     * @param  array<string, string>  $meta
      */
     public function meta(array $meta): static
     {
@@ -159,6 +163,7 @@ class Client
             return strlen($h);
         };
 
+        /** @var mixed $v silence linter */
         foreach ($ctx->curlOpts as $k => $v) {
             curl_setopt($ch, $k, $v);
         }

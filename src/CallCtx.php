@@ -41,7 +41,7 @@ class CallCtx
     /**
      * The curl options to use for the request.
      *
-     * @var array<int, int|string|bool>
+     * @var array<int, mixed>
      */
     public array $curlOpts = [];
 
