@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Iris\Interceptor;
 
 use Google\Protobuf\Internal\Message;
-use Iris\CallOption;
-use Iris\Error;
+use Iris\CallCtx;
+use Iris\Code;
 use Iris\Interceptor;
+use Iris\UnaryCall;
 
 /**
  * LoggingInterceptor logs gRPC call information including method, duration, and status.
@@ -19,39 +20,38 @@ class LoggingInterceptor extends Interceptor
     ) {}
 
     /**
-     * @param callable(string,Message,Message,CallOption...): null|Error $invoker
+     * @param callable(CallCtx, Message): UnaryCall $invoker
      */
-    public function intercept(
-        string $method,
-        Message $args,
-        Message $reply,
-        callable $invoker,
-        CallOption ...$opts,
-    ): null|Error {
+    public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
+    {
         $this->logger->info('gRPC call started', [
-            'method' => $method,
-            'request' => get_class($args),
+            'method' => $ctx->method,
+            'request' => get_class($ctx->args),
+            'call_id' => $ctx->id,
         ]);
 
         $start = microtime(true);
-        $result = $invoker($method, $args, $reply, ...$opts);
+        $call = $invoker($ctx, $reply);
         $duration = microtime(true) - $start;
 
-        if ($result instanceof Error) {
+        if ($call->code !== Code::OK) {
             $this->logger->error('gRPC call failed', [
-                'method' => $method,
+                'method' => $ctx->method,
                 'duration' => $duration,
-                'code' => $result->code->name,
-                'message' => $result->message,
+                'code' => $call->code->name,
+                'message' => $call->message,
+                'call_id' => $ctx->id,
             ]);
         } else {
             $this->logger->info('gRPC call completed', [
-                'method' => $method,
+                'code' => $call->code->name,
+                'method' => $ctx->method,
                 'duration' => $duration,
                 'reply' => get_class($reply),
+                'call_id' => $ctx->id,
             ]);
         }
 
-        return $result;
+        return $call;
     }
 }
