@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Iris;
+namespace Iris\Interceptor;
 
 use Google\Protobuf\Internal\Message;
+use Iris\CallOption;
+use Iris\Error;
+use Iris\Interceptor;
 
 /**
  * LoggingInterceptor logs gRPC call information including method, duration, and status.
@@ -25,15 +28,13 @@ class LoggingInterceptor extends Interceptor
         callable $invoker,
         CallOption ...$opts,
     ): null|Error {
-        $start = microtime(true);
-
         $this->logger->info('gRPC call started', [
             'method' => $method,
             'request' => get_class($args),
         ]);
 
+        $start = microtime(true);
         $result = $invoker($method, $args, $reply, ...$opts);
-
         $duration = microtime(true) - $start;
 
         if ($result instanceof Error) {

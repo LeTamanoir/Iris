@@ -193,6 +193,66 @@ func (x *DelayRequest) GetMs() int32 {
 	return 0
 }
 
+type FailurePatternRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FailTimes     int32                  `protobuf:"varint,1,opt,name=fail_times,json=failTimes,proto3" json:"fail_times,omitempty"`
+	ErrorCode     int32                  `protobuf:"varint,2,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
+	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FailurePatternRequest) Reset() {
+	*x = FailurePatternRequest{}
+	mi := &file_proto_test_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FailurePatternRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FailurePatternRequest) ProtoMessage() {}
+
+func (x *FailurePatternRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_test_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FailurePatternRequest.ProtoReflect.Descriptor instead.
+func (*FailurePatternRequest) Descriptor() ([]byte, []int) {
+	return file_proto_test_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *FailurePatternRequest) GetFailTimes() int32 {
+	if x != nil {
+		return x.FailTimes
+	}
+	return 0
+}
+
+func (x *FailurePatternRequest) GetErrorCode() int32 {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return 0
+}
+
+func (x *FailurePatternRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
 var File_proto_test_proto protoreflect.FileDescriptor
 
 const file_proto_test_proto_rawDesc = "" +
@@ -214,11 +274,18 @@ const file_proto_test_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\a\n" +
 	"\x05Empty\"\x1e\n" +
 	"\fDelayRequest\x12\x0e\n" +
-	"\x02ms\x18\x01 \x01(\x05R\x02ms2\x99\x01\n" +
+	"\x02ms\x18\x01 \x01(\x05R\x02ms\"g\n" +
+	"\x15FailurePatternRequest\x12\x1d\n" +
+	"\n" +
+	"fail_times\x18\x01 \x01(\x05R\tfailTimes\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x02 \x01(\x05R\terrorCode\x12\x10\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key2\xd8\x01\n" +
 	"\vTestService\x120\n" +
 	"\fGetDataTypes\x12\x0f.test.DataTypes\x1a\x0f.test.DataTypes\x12$\n" +
 	"\bGetEmpty\x12\v.test.Empty\x1a\v.test.Empty\x122\n" +
-	"\x0fGetDelayRequest\x12\x12.test.DelayRequest\x1a\v.test.EmptyBJZ,github.com/letamanoir/iris/test-server/proto\xca\x02\vTests\\Proto\xe2\x02\vTests\\Protob\x06proto3"
+	"\x0fGetDelayRequest\x12\x12.test.DelayRequest\x1a\v.test.Empty\x12=\n" +
+	"\x11GetFailurePattern\x12\x1b.test.FailurePatternRequest\x1a\v.test.EmptyBJZ,github.com/letamanoir/iris/test-server/proto\xca\x02\vTests\\Proto\xe2\x02\vTests\\Protob\x06proto3"
 
 var (
 	file_proto_test_proto_rawDescOnce sync.Once
@@ -232,23 +299,26 @@ func file_proto_test_proto_rawDescGZIP() []byte {
 	return file_proto_test_proto_rawDescData
 }
 
-var file_proto_test_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_test_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_test_proto_goTypes = []any{
-	(*DataTypes)(nil),    // 0: test.DataTypes
-	(*Empty)(nil),        // 1: test.Empty
-	(*DelayRequest)(nil), // 2: test.DelayRequest
-	nil,                  // 3: test.DataTypes.MapTestEntry
+	(*DataTypes)(nil),             // 0: test.DataTypes
+	(*Empty)(nil),                 // 1: test.Empty
+	(*DelayRequest)(nil),          // 2: test.DelayRequest
+	(*FailurePatternRequest)(nil), // 3: test.FailurePatternRequest
+	nil,                           // 4: test.DataTypes.MapTestEntry
 }
 var file_proto_test_proto_depIdxs = []int32{
-	3, // 0: test.DataTypes.map_test:type_name -> test.DataTypes.MapTestEntry
+	4, // 0: test.DataTypes.map_test:type_name -> test.DataTypes.MapTestEntry
 	0, // 1: test.TestService.GetDataTypes:input_type -> test.DataTypes
 	1, // 2: test.TestService.GetEmpty:input_type -> test.Empty
 	2, // 3: test.TestService.GetDelayRequest:input_type -> test.DelayRequest
-	0, // 4: test.TestService.GetDataTypes:output_type -> test.DataTypes
-	1, // 5: test.TestService.GetEmpty:output_type -> test.Empty
-	1, // 6: test.TestService.GetDelayRequest:output_type -> test.Empty
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	3, // 4: test.TestService.GetFailurePattern:input_type -> test.FailurePatternRequest
+	0, // 5: test.TestService.GetDataTypes:output_type -> test.DataTypes
+	1, // 6: test.TestService.GetEmpty:output_type -> test.Empty
+	1, // 7: test.TestService.GetDelayRequest:output_type -> test.Empty
+	1, // 8: test.TestService.GetFailurePattern:output_type -> test.Empty
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -265,7 +335,7 @@ func file_proto_test_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_test_proto_rawDesc), len(file_proto_test_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

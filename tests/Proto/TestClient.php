@@ -25,4 +25,10 @@ class TestClient extends \Iris\Client
         $reply = new PBEmpty();
         return $this->invoke('/test.TestService/GetDelayRequest', $request, $reply, ...$opts) ?? $reply;
     }
+
+    public function GetFailurePattern(FailurePatternRequest $request, CallOption ...$opts): PBEmpty|\Iris\Error
+    {
+        $reply = new PBEmpty();
+        return $this->invoke('/test.TestService/GetFailurePattern', $request, $reply, ...$opts) ?? $reply;
+    }
 }
