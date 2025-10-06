@@ -28,6 +28,7 @@ class RetryInterceptor extends Interceptor
     /**
      * @param callable(CallCtx, Message): UnaryCall $invoker
      */
+    #[\Override]
     public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
     {
         $attempt = 0;

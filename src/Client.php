@@ -6,6 +6,7 @@ namespace Iris;
 
 use CurlHandle;
 use Google\Protobuf\Internal\Message;
+use Random\RandomException;
 
 class Client
 {
@@ -43,6 +44,7 @@ class Client
 
         $ctx = new CallCtx();
 
+        // @mago-ignore analysis:unhandled-thrown-type
         $ctx->id = bin2hex(random_bytes(16));
         $ctx->method = $method;
         $ctx->args = $args;

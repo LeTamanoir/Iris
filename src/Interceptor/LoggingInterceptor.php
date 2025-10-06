@@ -22,6 +22,7 @@ class LoggingInterceptor extends Interceptor
     /**
      * @param callable(CallCtx, Message): UnaryCall $invoker
      */
+    #[\Override]
     public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
     {
         $this->logger->info('gRPC call started', [
