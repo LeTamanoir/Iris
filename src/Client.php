@@ -12,11 +12,6 @@ class Client
     private HandlePool $pool;
 
     /**
-     * @var CallOption[]
-     */
-    private array $callOpts = [];
-
-    /**
      * @var Interceptor[]
      */
     private array $interceptors = [];
@@ -27,11 +22,6 @@ class Client
         $this->pool = new HandlePool(1);
     }
 
-    public function globalOpts(CallOption ...$opts): void
-    {
-        $this->callOpts = $opts;
-    }
-
     public function interceptors(Interceptor ...$interceptors): void
     {
         $this->interceptors = $interceptors;
@@ -40,46 +30,47 @@ class Client
     /**
      * Performs the actual gRPC call with interceptors.
      */
-    public function invoke(string $method, Message $args, Message $reply, CallOption ...$opts): null|Error
+    public function invoke(string $method, Message $args, Message $reply, Interceptor ...$interceptors): UnaryCall
     {
-        $invoker = fn(string $m, Message $a, Message $r, CallOption ...$o) => $this->doInvoke($m, $a, $r, ...$o);
+        $invoker = fn(CallCtx $ctx, Message $reply) => $this->invokeUnary($ctx, $reply);
 
-        foreach (array_reverse($this->interceptors) as $i) {
-            $n = $invoker;
-            $invoker = fn(string $m, Message $a, Message $r, CallOption ...$o) => $i->intercept($m, $a, $r, $n, ...$o);
+        $interceptors = [...$this->interceptors, ...$interceptors];
+
+        foreach (array_reverse($interceptors) as $i) {
+            $next = $invoker;
+            $invoker = fn(CallCtx $ctx, Message $reply) => $i->interceptUnary($ctx, $reply, $next);
         }
 
-        return $invoker($method, $args, $reply, ...$opts);
+        $ctx = new CallCtx();
+
+        $ctx->id = bin2hex(random_bytes(16));
+        $ctx->method = $method;
+        $ctx->args = $args;
+
+        return $invoker($ctx, $reply);
     }
 
     /**
      * Performs the actual gRPC call without interceptors.
      */
-    private function doInvoke(string $method, Message $args, Message $reply, CallOption ...$opts): null|Error
+    private function invokeUnary(CallCtx $ctx, Message $reply): UnaryCall
     {
-        $info = new CallInfo();
-        foreach ([...$this->callOpts, ...$opts] as $o) {
-            if ($err = $o->before($info)) {
-                return $err;
-            }
-        }
-
-        $msg = $this->prepareMsg($args, $info->enc);
-        if ($msg instanceof Error) {
+        $msg = $this->prepareMsg($ctx->args, $ctx->enc);
+        if ($msg instanceof UnaryCall) {
             return $msg;
         }
 
         /** @var array<string, string> */
         $replyHdr = [];
-        $ch = $this->setupHandle($info, $method, $msg, $replyHdr);
+        $ch = $this->setupHandle($ctx, $ctx->method, $msg, $replyHdr);
 
         /** @var string|false */
         $rawReply = curl_exec($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
 
-        $attempt = new CallAttempt();
-        $attempt->curlInfo = curl_getinfo($ch);
+        /** @var array<string, mixed> */
+        $curlInfo = curl_getinfo($ch);
 
         $this->pool->release($ch);
 
@@ -89,14 +80,12 @@ class Client
                 CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
                 default => throw new \Exception('Unknown curl error (errno: ' . $errno . ', error: ' . $error . ')'),
             };
-            $result = new Error($code, $error);
+            $result = new UnaryCall($code, $error, $curlInfo);
         } else {
             $result = $this->decodeReply($rawReply, $replyHdr, $reply);
         }
 
-        foreach ([...$this->callOpts, ...$opts] as $o) {
-            $o->after($info, $attempt);
-        }
+        $result->curlInfo = $curlInfo;
 
         return $result;
     }
@@ -104,15 +93,15 @@ class Client
     /**
      * @param  array<string, string>  $replyHdr
      */
-    private function setupHandle(CallInfo $info, string $method, string $msg, array &$replyHdr): CurlHandle
+    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): CurlHandle
     {
         $ch = $this->pool->aquire();
 
         $headers = [
             'content-type: application/grpc',
-            'user-agent: ' . $info->userAgent,
+            'user-agent: ' . $ctx->userAgent,
             'te: trailers',
-            'grpc-encoding: ' . $info->enc->value,
+            'grpc-encoding: ' . $ctx->enc->value,
             'grpc-accept-encoding: ' . Encoding::list(),
         ];
 
@@ -125,7 +114,11 @@ class Client
             return strlen($h);
         };
 
-        foreach ($info->curlOpts as $k => $v) {
+        if ($ctx->timeoutMs > 0) {
+            curl_setopt($ch, CURLOPT_TIMEOUT_MS, $ctx->timeoutMs);
+        }
+
+        foreach ($ctx->curlOpts as $k => $v) {
             curl_setopt($ch, $k, $v);
         }
 
@@ -147,7 +140,7 @@ class Client
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
      */
-    private function prepareMsg(Message $args, Encoding $enc): string|Error
+    private function prepareMsg(Message $args, Encoding $enc): string|UnaryCall
     {
         $binary = $args->serializeToString();
 
@@ -157,11 +150,11 @@ class Client
         } else {
             $cFlag = 1;
             $data = match ($enc) {
-                Encoding::Gzip => gzencode($binary, 6) ?: new Error(Code::Unknown, 'Failed to encode gzip message'),
+                Encoding::Gzip => gzencode($binary, 6) ?: new UnaryCall(Code::Unknown, 'Failed to encode gzip message'),
             };
         }
 
-        if ($data instanceof Error) {
+        if ($data instanceof UnaryCall) {
             return $data;
         }
 
@@ -174,7 +167,7 @@ class Client
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
      */
-    private function decodeMsg(string $msg, null|Encoding $enc): string|Error
+    private function decodeMsg(string $msg, null|Encoding $enc): string|UnaryCall
     {
         $cFlag = unpack('C', $msg[0])[1];
         $data = substr($msg, 5);
@@ -185,11 +178,11 @@ class Client
         }
 
         if ($enc === null) {
-            return new Error(Code::Unknown, 'Message is compressed but no encoding specified');
+            return new UnaryCall(Code::Unknown, 'Message is compressed but no encoding specified');
         }
         return match ($enc) {
-            Encoding::Identity => new Error(Code::Unknown, 'Message is compressed but encoding is identity'),
-            Encoding::Gzip => gzdecode($data) ?: new Error(Code::Unknown, 'Failed to decode gzip message'),
+            Encoding::Identity => new UnaryCall(Code::Unknown, 'Message is compressed but encoding is identity'),
+            Encoding::Gzip => gzdecode($data) ?: new UnaryCall(Code::Unknown, 'Failed to decode gzip message'),
         };
     }
 
@@ -198,38 +191,32 @@ class Client
      *
      * @param  array<string, string>  $replyHdr
      */
-    private function decodeReply(string $rawReply, array $replyHdr, Message $reply): null|Error
+    private function decodeReply(string $rawReply, array $replyHdr, Message $reply): UnaryCall
     {
-        if (!array_key_exists('content-type', $replyHdr)) {
-            return new Error(Code::Unknown, 'Missing content-type header');
-        }
-        if ($replyHdr['content-type'] !== 'application/grpc') {
-            return new Error(Code::Unknown, 'Invalid content-type: ' . $replyHdr['content-type']);
+        if (($replyHdr['content-type'] ?? '') !== 'application/grpc') {
+            return new UnaryCall(Code::Unknown, 'Invalid content-type: ' . $replyHdr['content-type']);
         }
 
-        if (!array_key_exists('grpc-status', $replyHdr)) {
-            return new Error(Code::Unknown, 'Missing grpc-status header');
-        }
-        $code = Code::tryFrom((int) $replyHdr['grpc-status']);
+        $code = Code::tryFrom((int) ($replyHdr['grpc-status'] ?? ''));
         if ($code === null) {
-            return new Error(Code::Unknown, 'Unknown grpc-status code: ' . $replyHdr['grpc-status']);
+            return new UnaryCall(Code::Unknown, 'Unknown grpc-status code: ' . $replyHdr['grpc-status']);
         }
         if ($code !== Code::OK) {
-            return new Error($code, $replyHdr['grpc-message'] ?? 'Unknown error');
+            return new UnaryCall($code, $replyHdr['grpc-message'] ?? 'Unknown error');
         }
 
         $enc = Encoding::tryFrom($replyHdr['grpc-encoding'] ?? '');
         $msg = $this->decodeMsg($rawReply, $enc);
-        if ($msg instanceof Error) {
+        if ($msg instanceof UnaryCall) {
             return $msg;
         }
 
         try {
             $reply->mergeFromString($msg);
         } catch (\Throwable $e) {
-            return new Error(Code::Internal, $e->getMessage());
+            return new UnaryCall(Code::Internal, $e->getMessage());
         }
 
-        return null;
+        return new UnaryCall(Code::OK, $replyHdr['grpc-message'] ?? '');
     }
 }
