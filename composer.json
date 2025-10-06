@@ -20,7 +20,7 @@
         "psr/log": "^3.0"
     },
     "require-dev": {
-        "carthage-software/mago": "1.0.0-beta.25",
+        "carthage-software/mago": "1.0.0-beta.26",
         "google/protobuf": "^4.32",
         "pestphp/pest": "^4.1",
         "symfony/var-dumper": "^7.3"
