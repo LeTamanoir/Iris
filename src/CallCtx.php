@@ -32,16 +32,18 @@ class CallCtx
     public string $id;
 
     /**
+     * The interceptors to use for the call.
+     *
+     * @var Interceptor[]
+     */
+    public array $interceptors = [];
+
+    /**
      * The curl options to use for the request.
      *
      * @var array<int, int|string|bool>
      */
     public array $curlOpts = [];
-
-    /**
-     * The timeout for the request in milliseconds.
-     */
-    public int $timeoutMs = 30_000;
 
     /**
      * The user agent to use for the request.

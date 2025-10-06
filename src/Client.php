@@ -6,26 +6,71 @@ namespace Iris;
 
 use CurlHandle;
 use Google\Protobuf\Internal\Message;
-use Random\RandomException;
 
 class Client
 {
     private HandlePool $pool;
 
     /**
-     * @var Interceptor[]
+     * Context for the next call.
      */
-    private array $interceptors = [];
+    private CallCtx $pendingCtx;
 
     public function __construct(
         public string $host,
     ) {
         $this->pool = new HandlePool(1);
+        $this->pendingCtx = new CallCtx();
     }
 
-    public function interceptors(Interceptor ...$interceptors): void
+    /**
+     * Returns a new client with the given interceptors.
+     */
+    public function interceptors(Interceptor ...$interceptors): static
     {
-        $this->interceptors = $interceptors;
+        $clone = clone $this;
+        $clone->pendingCtx->interceptors = $interceptors;
+        return $clone;
+    }
+
+    /**
+     * Returns a new client with the given timeout.
+     */
+    public function timeout(int $ms): static
+    {
+        $clone = clone $this;
+        $clone->pendingCtx->curlOpts[CURLOPT_TIMEOUT_MS] = $ms;
+        return $clone;
+    }
+
+    /**
+     * Returns a new client with the given curl options.
+     */
+    public function curlOpts(array $curlOpts): static
+    {
+        $clone = clone $this;
+        $clone->pendingCtx->curlOpts = $curlOpts;
+        return $clone;
+    }
+
+    /**
+     * Returns a new client with the given encoding.
+     */
+    public function encoding(Encoding $enc): static
+    {
+        $clone = clone $this;
+        $clone->pendingCtx->enc = $enc;
+        return $clone;
+    }
+
+    /**
+     * Returns a new client with the given metadata.
+     */
+    public function meta(array $meta): static
+    {
+        $clone = clone $this;
+        $clone->pendingCtx->meta = $meta;
+        return $clone;
     }
 
     /**
@@ -35,14 +80,12 @@ class Client
     {
         $invoker = fn(CallCtx $ctx, Message $reply) => $this->invokeUnary($ctx, $reply);
 
-        $interceptors = [...$this->interceptors, ...$interceptors];
-
-        foreach (array_reverse($interceptors) as $i) {
+        foreach (array_reverse(array_merge($this->pendingCtx->interceptors, $interceptors)) as $i) {
             $next = $invoker;
             $invoker = fn(CallCtx $ctx, Message $reply) => $i->interceptUnary($ctx, $reply, $next);
         }
 
-        $ctx = new CallCtx();
+        $ctx = $this->pendingCtx;
 
         // @mago-ignore analysis:unhandled-thrown-type
         $ctx->id = bin2hex(random_bytes(16));
@@ -115,10 +158,6 @@ class Client
             }
             return strlen($h);
         };
-
-        if ($ctx->timeoutMs > 0) {
-            curl_setopt($ch, CURLOPT_TIMEOUT_MS, $ctx->timeoutMs);
-        }
 
         foreach ($ctx->curlOpts as $k => $v) {
             curl_setopt($ch, $k, $v);

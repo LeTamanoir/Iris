@@ -1,32 +1,30 @@
 <?php
 
+use Iris\Code;
 use Tests\Proto\DelayRequest;
+use Tests\Proto\PBEmpty;
 
-// TODO: add back timeout
-// describe('timeout', function () {
-//     test('times out after the specified timeout', function () {
-//         $client = testClient();
+test('times out after the specified timeout', function () {
+    $client = testClient();
 
-//         $request = new DelayRequest();
+    $request = new DelayRequest();
 
-//         $request->setMs(100);
+    $request->setMs(100);
 
-//         $data = $client->GetDelayRequest($request, timeout(50));
+    $call = $client->timeout(10)->GetDelayRequest($request, $reply);
 
-//         expect($data)->toBeInstanceOf(Error::class);
-//         expect($data->code)->toBe(Code::DeadlineExceeded);
-//     });
+    expect($call->code)->toBe(Code::DeadlineExceeded);
+});
 
-//     test('does not time out before the specified timeout', function () {
-//         $client = testClient();
+test('does not time out before the specified timeout', function () {
+    $client = testClient();
 
-//         $request = new DelayRequest();
+    $request = new DelayRequest();
 
-//         $request->setMs(100);
+    $request->setMs(100);
 
-//         $data = $client->GetDelayRequest($request, timeout(150));
+    $call = $client->timeout(150)->GetDelayRequest($request, $reply);
 
-//         expect($data)->not->toBeInstanceOf(Error::class);
-//         expect($data)->toBeInstanceOf(PBEmpty::class);
-//     });
-// });
+    expect($call->code)->toBe(Code::OK);
+    expect($reply)->toBeInstanceOf(PBEmpty::class);
+});
