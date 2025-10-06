@@ -15,6 +15,9 @@ use Iris\Interceptor;
  */
 class RetryInterceptor extends Interceptor
 {
+    /**
+     * @param Code[] $retryableCodes
+     */
     public function __construct(
         private readonly int $maxAttempts = 3,
         private readonly int $delayMs = 100,
@@ -33,7 +36,7 @@ class RetryInterceptor extends Interceptor
         CallOption ...$opts,
     ): null|Error {
         $attempt = 0;
-        $lastError = null;
+        $result = null;
 
         while ($attempt < $this->maxAttempts) {
             $attempt++;
@@ -44,10 +47,8 @@ class RetryInterceptor extends Interceptor
                 return null;
             }
 
-            $lastError = $result;
-
             // Check if we should retry this error
-            if (!array_any($this->retryableCodes, fn(Code $code) => $code === $result->code)) {
+            if (!$this->isRetryable($result->code)) {
                 return $result;
             }
 
@@ -60,6 +61,16 @@ class RetryInterceptor extends Interceptor
             }
         }
 
-        return $lastError;
+        return $result;
+    }
+
+    private function isRetryable(Code $code): bool
+    {
+        foreach ($this->retryableCodes as $c) {
+            if ($c === $code) {
+                return true;
+            }
+        }
+        return false;
     }
 }

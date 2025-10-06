@@ -158,7 +158,6 @@ describe('retry', function () {
 
             public function log($level, $message, array $context = []): void
             {
-                dump($message, $context);
                 $this->logs[] = $message;
             }
         };
