@@ -10,6 +10,7 @@ service TestService {
   rpc GetDataTypes(DataTypes) returns (DataTypes);
   rpc GetEmpty(Empty) returns (Empty);
   rpc GetDelayRequest(DelayRequest) returns (Empty);
+  rpc GetFailurePattern(FailurePatternRequest) returns (Empty);
 }
 
 message DataTypes {
@@ -26,4 +27,10 @@ message Empty {}
 
 message DelayRequest {
   int32 ms = 1;
+}
+
+message FailurePatternRequest {
+  int32 fail_times = 1;
+  int32 error_code = 2;
+  string key = 3;
 }

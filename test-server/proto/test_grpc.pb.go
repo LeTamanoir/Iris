@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TestService_GetDataTypes_FullMethodName    = "/test.TestService/GetDataTypes"
-	TestService_GetEmpty_FullMethodName        = "/test.TestService/GetEmpty"
-	TestService_GetDelayRequest_FullMethodName = "/test.TestService/GetDelayRequest"
+	TestService_GetDataTypes_FullMethodName      = "/test.TestService/GetDataTypes"
+	TestService_GetEmpty_FullMethodName          = "/test.TestService/GetEmpty"
+	TestService_GetDelayRequest_FullMethodName   = "/test.TestService/GetDelayRequest"
+	TestService_GetFailurePattern_FullMethodName = "/test.TestService/GetFailurePattern"
 )
 
 // TestServiceClient is the client API for TestService service.
@@ -31,6 +32,7 @@ type TestServiceClient interface {
 	GetDataTypes(ctx context.Context, in *DataTypes, opts ...grpc.CallOption) (*DataTypes, error)
 	GetEmpty(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	GetDelayRequest(ctx context.Context, in *DelayRequest, opts ...grpc.CallOption) (*Empty, error)
+	GetFailurePattern(ctx context.Context, in *FailurePatternRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type testServiceClient struct {
@@ -71,6 +73,16 @@ func (c *testServiceClient) GetDelayRequest(ctx context.Context, in *DelayReques
 	return out, nil
 }
 
+func (c *testServiceClient) GetFailurePattern(ctx context.Context, in *FailurePatternRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, TestService_GetFailurePattern_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestServiceServer is the server API for TestService service.
 // All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type TestServiceServer interface {
 	GetDataTypes(context.Context, *DataTypes) (*DataTypes, error)
 	GetEmpty(context.Context, *Empty) (*Empty, error)
 	GetDelayRequest(context.Context, *DelayRequest) (*Empty, error)
+	GetFailurePattern(context.Context, *FailurePatternRequest) (*Empty, error)
 	mustEmbedUnimplementedTestServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedTestServiceServer) GetEmpty(context.Context, *Empty) (*Empty,
 }
 func (UnimplementedTestServiceServer) GetDelayRequest(context.Context, *DelayRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDelayRequest not implemented")
+}
+func (UnimplementedTestServiceServer) GetFailurePattern(context.Context, *FailurePatternRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFailurePattern not implemented")
 }
 func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 func (UnimplementedTestServiceServer) testEmbeddedByValue()                     {}
@@ -172,6 +188,24 @@ func _TestService_GetDelayRequest_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestService_GetFailurePattern_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FailurePatternRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServiceServer).GetFailurePattern(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestService_GetFailurePattern_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServiceServer).GetFailurePattern(ctx, req.(*FailurePatternRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestService_ServiceDesc is the grpc.ServiceDesc for TestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDelayRequest",
 			Handler:    _TestService_GetDelayRequest_Handler,
+		},
+		{
+			MethodName: "GetFailurePattern",
+			Handler:    _TestService_GetFailurePattern_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

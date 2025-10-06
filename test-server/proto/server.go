@@ -4,7 +4,11 @@ import (
 	"context"
 	_log "log"
 	"os"
+	"sync"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func Log(format string, a ...any) {
@@ -15,6 +19,8 @@ func Log(format string, a ...any) {
 
 type testService struct {
 	UnimplementedTestServiceServer
+	failureCounter map[string]int32
+	mu             sync.Mutex
 }
 
 func (s *testService) GetDataTypes(ctx context.Context, req *DataTypes) (*DataTypes, error) {
@@ -33,6 +39,28 @@ func (s *testService) GetDelayRequest(ctx context.Context, req *DelayRequest) (*
 	return &Empty{}, nil
 }
 
+func (s *testService) GetFailurePattern(ctx context.Context, req *FailurePatternRequest) (*Empty, error) {
+	Log("GetFailurePattern: fail_times=%d, error_code=%d, key=%s", req.FailTimes, req.ErrorCode, req.Key)
+
+	s.mu.Lock()
+	currentCount := s.failureCounter[req.Key]
+	s.failureCounter[req.Key]++
+	s.mu.Unlock()
+
+	Log("GetFailurePattern: currentCount=%d", currentCount)
+
+	if currentCount < req.FailTimes {
+		code := codes.Code(req.ErrorCode)
+		Log("GetFailurePattern: returning error code %d", code)
+		return nil, status.Error(code, "simulated failure")
+	}
+
+	Log("GetFailurePattern: returning success")
+	return &Empty{}, nil
+}
+
 func NewTestService() TestServiceServer {
-	return &testService{}
+	return &testService{
+		failureCounter: make(map[string]int32),
+	}
 }
