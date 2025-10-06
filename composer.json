@@ -30,7 +30,6 @@
             "Iris\\": "src"
         },
         "files": [
-            "src/functions.php",
             "src/Version.php"
         ]
     },

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Iris\Interceptor;
 
 use Google\Protobuf\Internal\Message;
-use Iris\CallOption;
+use Iris\CallCtx;
 use Iris\Code;
-use Iris\Error;
 use Iris\Interceptor;
+use Iris\UnaryCall;
 
 /**
  * RetryInterceptor automatically retries failed gRPC calls with exponential backoff.
@@ -26,26 +26,18 @@ class RetryInterceptor extends Interceptor
     ) {}
 
     /**
-     * @param callable(string,Message,Message,CallOption...): null|Error $invoker
+     * @param callable(CallCtx, Message): UnaryCall $invoker
      */
-    public function intercept(
-        string $method,
-        Message $args,
-        Message $reply,
-        callable $invoker,
-        CallOption ...$opts,
-    ): null|Error {
+    #[\Override]
+    public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
+    {
         $attempt = 0;
         $result = null;
 
         while ($attempt < $this->maxAttempts) {
             $attempt++;
 
-            $result = $invoker($method, $args, $reply, ...$opts);
-
-            if ($result === null) {
-                return null;
-            }
+            $result = $invoker($ctx, $reply);
 
             // Check if we should retry this error
             if (!$this->isRetryable($result->code)) {

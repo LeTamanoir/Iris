@@ -13,13 +13,10 @@ use Google\Protobuf\Internal\Message;
 abstract class Interceptor
 {
     /**
-     * @param callable(string,Message,Message,CallOption...): null|Error $invoker
+     * @param callable(CallCtx,Message): UnaryCall $invoker
      */
-    abstract public function intercept(
-        string $method,
-        Message $args,
-        Message $reply,
-        callable $invoker,
-        CallOption ...$opts,
-    ): null|Error;
+    public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
+    {
+        return $invoker($ctx, $reply);
+    }
 }

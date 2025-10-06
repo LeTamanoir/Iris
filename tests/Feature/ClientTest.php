@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-use Iris\CallInfo;
-use Iris\CallOption;
+use Google\Protobuf\Internal\Message;
+use Iris\CallCtx;
 use Iris\Code;
-use Iris\Error;
+use Iris\Interceptor;
+use Iris\UnaryCall;
 use Tests\Proto\DataTypes;
-use Tests\Proto\DelayRequest;
 use Tests\Proto\PBEmpty;
-
-use function Iris\timeout;
 
 describe('data transfer', function () {
     test('returns correct data', function () {
@@ -23,120 +21,94 @@ describe('data transfer', function () {
         $request->setBytesTest('bytes');
         $request->setMapTest(['key' => 'value']);
 
-        $response = testClient()->GetDataTypes($request);
+        $call = testClient()->GetDataTypes($request, $reply);
 
-        expect($response)->not->toBeInstanceOf(Error::class);
-        expect(serializeMsg($response))->toBe(serializeMsg($request));
+        expect($call->code)->toBe(Code::OK);
+        expect(serializeMsg($reply))->toBe(serializeMsg($request));
     });
 });
 
-describe('call options', function () {
-    test('global options are applied to all calls', function () {
+describe('interceptors', function () {
+    test('global interceptors are applied to all calls', function () {
         $client = testClient();
 
         $calledCount = 0;
 
-        $client->globalOpts(new class($calledCount) extends CallOption {
+        $client->interceptors(new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
 
-            public function before(CallInfo $info): null|Error
+            public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
             {
                 $this->calledCount++;
-                return null;
+                return $invoker($ctx, $reply);
             }
         });
 
         $request = new PBEmpty();
 
-        $client->GetEmpty($request);
-        $client->GetEmpty($request);
+        $client->GetEmpty($request, $reply1);
+        $client->GetEmpty($request, $reply2);
 
         expect($calledCount)->toBe(2);
     });
 
-    test('local options are applied to the call', function () {
+    test('local interceptors are applied to the call', function () {
         $client = testClient();
 
         $calledCount = 0;
 
         $request = new PBEmpty();
 
-        $client->GetEmpty($request, new class($calledCount) extends CallOption {
+        $client->GetEmpty($request, $reply1, new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
 
-            public function before(CallInfo $info): null|Error
+            public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
             {
                 $this->calledCount++;
-                return null;
+                return $invoker($ctx, $reply);
             }
         });
 
-        $client->GetEmpty($request);
+        $client->GetEmpty($request, $reply2);
 
         expect($calledCount)->toBe(1);
     });
 
-    test('global and local call options are applied to the call', function () {
+    test('global and local interceptors are applied to the call', function () {
         $client = testClient();
 
         $calledCount = 0;
 
-        $client->globalOpts(new class($calledCount) extends CallOption {
+        $client->interceptors(new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
 
-            public function before(CallInfo $info): null|Error
+            public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
             {
                 $this->calledCount++;
-                return null;
+                return $invoker($ctx, $reply);
             }
         });
 
         $request = new PBEmpty();
 
-        $client->GetEmpty($request, new class($calledCount) extends CallOption {
+        $client->GetEmpty($request, $reply, new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
 
-            public function before(CallInfo $info): null|Error
+            public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
             {
                 $this->calledCount++;
-                return null;
+                return $invoker($ctx, $reply);
             }
         });
 
         expect($calledCount)->toBe(2);
-    });
-
-    describe('timeout', function () {
-        test('times out after the specified timeout', function () {
-            $client = testClient();
-
-            $request = new DelayRequest();
-            $request->setMs(100);
-
-            $data = $client->GetDelayRequest($request, timeout(50));
-
-            expect($data)->toBeInstanceOf(Error::class);
-            expect($data->code)->toBe(Code::DeadlineExceeded);
-        });
-
-        test('does not time out before the specified timeout', function () {
-            $client = testClient();
-
-            $request = new DelayRequest();
-            $request->setMs(100);
-
-            $data = $client->GetDelayRequest($request, timeout(150));
-
-            expect($data)->not->toBeInstanceOf(Error::class);
-            expect($data)->toBeInstanceOf(PBEmpty::class);
-        });
     });
 });

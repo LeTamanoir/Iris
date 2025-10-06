@@ -49,7 +49,7 @@ func (s *testService) GetFailurePattern(ctx context.Context, req *FailurePattern
 
 	Log("GetFailurePattern: currentCount=%d", currentCount)
 
-	if currentCount < req.FailTimes {
+	if currentCount < req.FailTimes || req.FailTimes == 0 {
 		code := codes.Code(req.ErrorCode)
 		Log("GetFailurePattern: returning error code %d", code)
 		return nil, status.Error(code, "simulated failure")
