@@ -8,16 +8,12 @@ use Iris\UnaryCall;
 
 class GetDataTypesResponse extends UnaryCall
 {
-    public function __construct(
-        public DataTypes $data = new DataTypes(),
-    ) {}
+    public DataTypes $data;
 }
 
 class GetEmptyResponse extends UnaryCall
 {
-    public function __construct(
-        public PBEmpty $data = new PBEmpty(),
-    ) {}
+    public PBEmpty $data;
 }
 
 class TestClient extends \Iris\Client

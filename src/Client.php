@@ -8,6 +8,7 @@ use CurlHandle;
 use Exception;
 use Google\Protobuf\Internal\Message;
 use InvalidArgumentException;
+use ReflectionProperty;
 
 class Client
 {
@@ -268,7 +269,10 @@ class Client
         $enc = Encoding::tryFrom($replyHdr['grpc-encoding'] ?? '');
 
         try {
-            // @mago-ignore analysis:missing-magic-method
+            // @mago-ignore analysis:non-existent-method,mixed-assignment,possible-method-access-on-null,non-existent-method
+            $dataType = new ReflectionProperty($reply, 'data')->getType()->getName();
+            // @mago-ignore analysis:missing-magic-method,property-type-coercion,unknown-class-instantiation
+            $reply->data = new $dataType();
             $reply->data->mergeFromString($this->decodeMsg($rawReply, $enc));
         } catch (\Throwable $e) {
             $reply->code = Code::Internal;
