@@ -48,7 +48,7 @@ class LoggingInterceptor extends Interceptor
                 'method' => $ctx->method,
                 'duration' => $duration,
                 // @mago-ignore analysis:missing-magic-method
-                'reply' => get_class($reply->data), 
+                'reply' => get_class($reply->data),
                 'call_id' => $ctx->id,
             ]);
         }

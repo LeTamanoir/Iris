@@ -8,8 +8,7 @@ use Iris\Interceptor\RetryInterceptor;
 use Tests\Proto\FailurePatternRequest;
 
 test('succeeds after transient failures', function () {
-    $client = testClient();
-    $client->interceptors(new RetryInterceptor(maxAttempts: 3));
+    $client = testClient()->interceptors(new RetryInterceptor(maxAttempts: 3));
 
     $result = $client->GetFailurePattern(
         new FailurePatternRequest()
@@ -22,8 +21,7 @@ test('succeeds after transient failures', function () {
 });
 
 test('respects max attempts', function () {
-    $client = testClient();
-    $client->interceptors(new RetryInterceptor(maxAttempts: 2));
+    $client = testClient()->interceptors(new RetryInterceptor(maxAttempts: 2));
 
     $result = $client->GetFailurePattern(
         new FailurePatternRequest()
@@ -37,8 +35,7 @@ test('respects max attempts', function () {
 });
 
 test('does not retry non-retryable codes', function () {
-    $client = testClient();
-    $client->interceptors(new RetryInterceptor(maxAttempts: 3));
+    $client = testClient()->interceptors(new RetryInterceptor(maxAttempts: 3));
 
     $result = $client->GetFailurePattern(
         new FailurePatternRequest()
@@ -52,8 +49,7 @@ test('does not retry non-retryable codes', function () {
 });
 
 test('works with custom retryable codes', function () {
-    $client = testClient();
-    $client->interceptors(new RetryInterceptor(
+    $client = testClient()->interceptors(new RetryInterceptor(
         maxAttempts: 3,
         retryableCodes: [Code::Internal],
     ));
@@ -83,7 +79,7 @@ test('works with other interceptors', function () {
         }
     };
 
-    $client->interceptors(new LoggingInterceptor($logger), new RetryInterceptor(maxAttempts: 3));
+    $client = $client->interceptors(new LoggingInterceptor($logger), new RetryInterceptor(maxAttempts: 3));
 
     $result = $client->GetFailurePattern(
         new FailurePatternRequest()
@@ -101,8 +97,7 @@ test('works with other interceptors', function () {
 });
 
 test('uses exponential backoff', function () {
-    $client = testClient();
-    $client->interceptors(new RetryInterceptor(
+    $client = testClient()->interceptors(new RetryInterceptor(
         maxAttempts: 3,
         delayMs: 50,
         multiplier: 2.0,

@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-use Google\Protobuf\Internal\Message;
 use Iris\CallCtx;
 use Iris\Code;
 use Iris\Interceptor;
 use Iris\UnaryCall;
 use Tests\Proto\DataTypes;
-use Tests\Proto\DataTypesResponse;
 use Tests\Proto\PBEmpty;
 
 describe('data transfer', function () {
@@ -31,11 +29,9 @@ describe('data transfer', function () {
 
 describe('interceptors', function () {
     test('global interceptors are applied to all calls', function () {
-        $client = testClient();
-
         $calledCount = 0;
 
-        $client->interceptors(new class($calledCount) extends Interceptor {
+        $client = testClient()->interceptors(new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
@@ -62,7 +58,7 @@ describe('interceptors', function () {
 
         $request = new PBEmpty();
 
-        $client->GetEmpty($request, new class($calledCount) extends Interceptor {
+        $client->interceptors(new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
@@ -72,7 +68,7 @@ describe('interceptors', function () {
                 $this->calledCount++;
                 return $invoker($ctx, $reply);
             }
-        });
+        })->GetEmpty($request);
 
         $client->GetEmpty($request);
 
@@ -80,11 +76,9 @@ describe('interceptors', function () {
     });
 
     test('global and local interceptors are applied to the call', function () {
-        $client = testClient();
-
         $calledCount = 0;
 
-        $client->interceptors(new class($calledCount) extends Interceptor {
+        $client = testClient()->interceptors(new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
@@ -98,7 +92,7 @@ describe('interceptors', function () {
 
         $request = new PBEmpty();
 
-        $client->GetEmpty($request, new class($calledCount) extends Interceptor {
+        $client->interceptors(new class($calledCount) extends Interceptor {
             public function __construct(
                 private int &$calledCount,
             ) {}
@@ -108,7 +102,7 @@ describe('interceptors', function () {
                 $this->calledCount++;
                 return $invoker($ctx, $reply);
             }
-        });
+        })->GetEmpty($request);
 
         expect($calledCount)->toBe(2);
     });

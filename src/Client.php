@@ -11,6 +11,9 @@ use InvalidArgumentException;
 
 class Client
 {
+    /**
+     * The pool of curl handles.
+     */
     private HandlePool $pool;
 
     /**
@@ -26,12 +29,21 @@ class Client
     }
 
     /**
+     * When cloning, retain the shared handle pool,
+     * but deep clone the pending context to ensure isolation.
+     */
+    public function __clone()
+    {
+        $this->pendingCtx = clone $this->pendingCtx;
+    }
+
+    /**
      * Returns a new client with the given interceptors.
      */
     public function interceptors(Interceptor ...$interceptors): static
     {
         $clone = clone $this;
-        $clone->pendingCtx->interceptors = $interceptors;
+        $clone->pendingCtx->interceptors = array_merge($clone->pendingCtx->interceptors, $interceptors);
         return $clone;
     }
 
@@ -82,11 +94,11 @@ class Client
     /**
      * Performs the actual gRPC call with interceptors.
      */
-    public function invoke(string $method, Message $args, UnaryCall $reply, Interceptor ...$interceptors): UnaryCall
+    public function invoke(string $method, Message $args, UnaryCall $reply): UnaryCall
     {
         $invoker = fn(CallCtx $ctx, UnaryCall $reply) => $this->invokeUnary($ctx, $reply);
 
-        foreach (array_reverse(array_merge($this->pendingCtx->interceptors, $interceptors)) as $i) {
+        foreach (array_reverse($this->pendingCtx->interceptors) as $i) {
             $next = $invoker;
             $invoker = fn(CallCtx $ctx, UnaryCall $reply) => $i->interceptUnary($ctx, $reply, $next);
         }
@@ -126,13 +138,12 @@ class Client
         $this->pool->release($ch);
 
         if ($rawReply === false) {
-            $code = match ($errno) {
+            $reply->message = $error;
+            $reply->code = match ($errno) {
                 CURLE_OPERATION_TIMEDOUT => Code::DeadlineExceeded,
                 CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
-                default => throw new \Exception('Unknown curl error (errno: ' . $errno . ', error: ' . $error . ')'),
+                default => Code::Unknown,
             };
-            $reply->code = $code;
-            $reply->message = $error;
         } else {
             $this->decodeReply($rawReply, $replyHdr, $reply);
         }

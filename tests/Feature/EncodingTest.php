@@ -1,6 +1,5 @@
 <?php
 
-use Google\Protobuf\Internal\Message;
 use Iris\CallCtx;
 use Iris\Code;
 use Iris\Encoding;
@@ -8,8 +7,6 @@ use Iris\Interceptor;
 use Iris\UnaryCall;
 
 test('supports gzip encoding', function () {
-    $client = testClient();
-
     $request = new Tests\Proto\DataTypes();
     $request->setStrTest('test');
     $request->setIntTest(1);
@@ -22,7 +19,7 @@ test('supports gzip encoding', function () {
     $identitySize = 0;
     $gzipSize = 0;
 
-    $client->interceptors(new class($identitySize, $gzipSize) extends Interceptor {
+    $client = testClient()->interceptors(new class($identitySize, $gzipSize) extends Interceptor {
         public function __construct(
             private int &$identitySize,
             private int &$gzipSize,
