@@ -62,7 +62,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest]
-        php: [8.4, 8.3]
+        php: [8.4]
         stability: [prefer-lowest, prefer-stable]
 
     name: "Test (PHP: ${{ matrix.php }} / ${{ matrix.stability }} / ${{ matrix.os }})"
