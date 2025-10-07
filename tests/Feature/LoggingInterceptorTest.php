@@ -22,7 +22,7 @@ test('logs the call success', function () {
 
     $client->interceptors(new LoggingInterceptor($logger));
 
-    $client->GetDataTypes(new DataTypes(), $reply);
+    $client->GetDataTypes(new DataTypes());
 
     expect($logger->logs)->toBe([
         'gRPC call started',
@@ -44,7 +44,7 @@ test('logs the call failure', function () {
 
     $client->interceptors(new LoggingInterceptor($logger));
 
-    $client->GetFailurePattern((new FailurePatternRequest())->setErrorCode(Code::Unavailable->value), $reply);
+    $client->GetFailurePattern(new FailurePatternRequest()->setErrorCode(Code::Unavailable->value));
 
     expect($logger->logs)->toBe([
         'gRPC call started',
@@ -76,7 +76,7 @@ test('with multiple loggers', function () {
         new LoggingInterceptor($logger(2, $logs, $ids)),
     );
 
-    $client->GetDataTypes(new DataTypes(), $reply);
+    $client->GetDataTypes(new DataTypes());
 
     expect(count(array_unique($ids)))->toBe(1);
 

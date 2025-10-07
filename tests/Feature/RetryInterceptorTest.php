@@ -6,20 +6,16 @@ use Iris\Code;
 use Iris\Interceptor\LoggingInterceptor;
 use Iris\Interceptor\RetryInterceptor;
 use Tests\Proto\FailurePatternRequest;
-use Tests\Proto\PBEmpty;
 
 test('succeeds after transient failures', function () {
     $client = testClient();
     $client->interceptors(new RetryInterceptor(maxAttempts: 3));
 
-    $reply = new PBEmpty();
-
     $result = $client->GetFailurePattern(
-        (new FailurePatternRequest())
+        new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
-        $reply,
     );
 
     expect($result->code)->toBe(Code::OK);
@@ -29,14 +25,11 @@ test('respects max attempts', function () {
     $client = testClient();
     $client->interceptors(new RetryInterceptor(maxAttempts: 2));
 
-    $reply = new PBEmpty();
-
     $result = $client->GetFailurePattern(
-        (new FailurePatternRequest())
+        new FailurePatternRequest()
             ->setFailTimes(5)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
-        $reply,
     );
 
     expect($result->code)->not->toBeNull();
@@ -47,14 +40,11 @@ test('does not retry non-retryable codes', function () {
     $client = testClient();
     $client->interceptors(new RetryInterceptor(maxAttempts: 3));
 
-    $reply = new PBEmpty();
-
     $result = $client->GetFailurePattern(
-        (new FailurePatternRequest())
+        new FailurePatternRequest()
             ->setFailTimes(1)
             ->setErrorCode(Code::InvalidArgument->value)
             ->setKey('test-' . uniqid()),
-        $reply,
     );
 
     expect($result->code)->not->toBeNull();
@@ -68,14 +58,11 @@ test('works with custom retryable codes', function () {
         retryableCodes: [Code::Internal],
     ));
 
-    $reply = new PBEmpty();
-
     $result = $client->GetFailurePattern(
-        (new FailurePatternRequest())
+        new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Internal->value)
             ->setKey('test-' . uniqid()),
-        $reply,
     );
 
     expect($result->code)->toBe(Code::OK);
@@ -83,8 +70,6 @@ test('works with custom retryable codes', function () {
 
 test('works with other interceptors', function () {
     $client = testClient();
-    $reply = new PBEmpty();
-
     $logs = [];
 
     $logger = new class($logs) extends \Psr\Log\AbstractLogger {
@@ -101,11 +86,10 @@ test('works with other interceptors', function () {
     $client->interceptors(new LoggingInterceptor($logger), new RetryInterceptor(maxAttempts: 3));
 
     $result = $client->GetFailurePattern(
-        (new FailurePatternRequest())
+        new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
-        $reply,
     );
 
     // LoggingInterceptor only sees the final result after all retries
@@ -124,15 +108,12 @@ test('uses exponential backoff', function () {
         multiplier: 2.0,
     ));
 
-    $reply = new PBEmpty();
-
     $start = microtime(true);
     $client->GetFailurePattern(
-        (new FailurePatternRequest())
+        new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
-        $reply,
     );
     $duration = (microtime(true) - $start) * 1000;
 

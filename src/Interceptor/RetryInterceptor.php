@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Iris\Interceptor;
 
-use Google\Protobuf\Internal\Message;
 use Iris\CallCtx;
 use Iris\Code;
 use Iris\Interceptor;
@@ -26,10 +25,10 @@ class RetryInterceptor extends Interceptor
     ) {}
 
     /**
-     * @param callable(CallCtx, Message): UnaryCall $invoker
+     * @param callable(CallCtx, UnaryCall): UnaryCall $invoker
      */
     #[\Override]
-    public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
+    public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
     {
         $attempt = 0;
         $result = null;

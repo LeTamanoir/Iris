@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Iris\Interceptor;
 
-use Google\Protobuf\Internal\Message;
 use Iris\CallCtx;
 use Iris\Code;
 use Iris\Interceptor;
@@ -20,10 +19,10 @@ class LoggingInterceptor extends Interceptor
     ) {}
 
     /**
-     * @param callable(CallCtx, Message): UnaryCall $invoker
+     * @param callable(CallCtx,UnaryCall): UnaryCall $invoker
      */
     #[\Override]
-    public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
+    public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
     {
         $this->logger->info('gRPC call started', [
             'method' => $ctx->method,
@@ -48,7 +47,8 @@ class LoggingInterceptor extends Interceptor
                 'code' => $call->code->name,
                 'method' => $ctx->method,
                 'duration' => $duration,
-                'reply' => get_class($reply),
+                // @mago-ignore analysis:missing-magic-method
+                'reply' => get_class($reply->data), 
                 'call_id' => $ctx->id,
             ]);
         }

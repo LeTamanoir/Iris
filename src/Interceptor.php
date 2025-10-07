@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Iris;
 
-use Google\Protobuf\Internal\Message;
-
 /**
  * Interceptor allows you to intercept and modify gRPC calls.
  * Interceptors form a chain where each interceptor can call the next one.
@@ -13,9 +11,9 @@ use Google\Protobuf\Internal\Message;
 abstract class Interceptor
 {
     /**
-     * @param callable(CallCtx,Message): UnaryCall $invoker
+     * @param callable(CallCtx,UnaryCall): UnaryCall $invoker
      */
-    public function interceptUnary(CallCtx $ctx, Message $reply, callable $invoker): UnaryCall
+    public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
     {
         return $invoker($ctx, $reply);
     }
