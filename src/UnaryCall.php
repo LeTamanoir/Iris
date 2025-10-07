@@ -4,17 +4,29 @@ declare(strict_types=1);
 
 namespace Iris;
 
+use Google\Protobuf\Internal\Message;
+
 /**
  * Represents a gRPC unary call.
+ *
+ * @property Message $data The reply message, present in each reply class.
  */
-final class UnaryCall
+abstract class UnaryCall
 {
     /**
-     * @param array<string, mixed> $curlInfo
+     * The gRPC status code.
      */
-    public function __construct(
-        public Code $code,
-        public string $message,
-        public array $curlInfo = [],
-    ) {}
+    public Code $code;
+
+    /**
+     * The gRPC status message.
+     */
+    public string $message;
+
+    /**
+     * The cURL info from the request.
+     *
+     * @var array<string, mixed>
+     */
+    public array $curlInfo;
 }

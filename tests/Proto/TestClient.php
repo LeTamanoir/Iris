@@ -4,35 +4,37 @@ declare(strict_types=1);
 
 namespace Tests\Proto;
 
-use Iris\Interceptor;
 use Iris\UnaryCall;
+
+class GetDataTypesResponse extends UnaryCall
+{
+    public DataTypes $data;
+}
+
+class GetEmptyResponse extends UnaryCall
+{
+    public PBEmpty $data;
+}
 
 class TestClient extends \Iris\Client
 {
-    public function GetDataTypes(DataTypes $request, DataTypes|null &$reply, Interceptor ...$its): UnaryCall
+    public function GetDataTypes(DataTypes $request): GetDataTypesResponse
     {
-        $reply ??= new DataTypes();
-        return $this->invoke('/test.TestService/GetDataTypes', $request, $reply, ...$its);
+        return $this->invoke('/test.TestService/GetDataTypes', $request, new GetDataTypesResponse());
     }
 
-    public function GetEmpty(PBEmpty $request, PBEmpty|null &$reply, Interceptor ...$its): UnaryCall
+    public function GetEmpty(PBEmpty $request): GetEmptyResponse
     {
-        $reply ??= new PBEmpty();
-        return $this->invoke('/test.TestService/GetEmpty', $request, $reply, ...$its);
+        return $this->invoke('/test.TestService/GetEmpty', $request, new GetEmptyResponse());
     }
 
-    public function GetDelayRequest(DelayRequest $request, PBEmpty|null &$reply, Interceptor ...$its): UnaryCall
+    public function GetDelayRequest(DelayRequest $request): GetEmptyResponse
     {
-        $reply ??= new PBEmpty();
-        return $this->invoke('/test.TestService/GetDelayRequest', $request, $reply, ...$its);
+        return $this->invoke('/test.TestService/GetDelayRequest', $request, new GetEmptyResponse());
     }
 
-    public function GetFailurePattern(
-        FailurePatternRequest $request,
-        PBEmpty|null &$reply,
-        Interceptor ...$its,
-    ): UnaryCall {
-        $reply ??= new PBEmpty();
-        return $this->invoke('/test.TestService/GetFailurePattern', $request, $reply, ...$its);
+    public function GetFailurePattern(FailurePatternRequest $request): GetEmptyResponse
+    {
+        return $this->invoke('/test.TestService/GetFailurePattern', $request, new GetEmptyResponse());
     }
 }

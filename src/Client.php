@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Iris;
 
 use CurlHandle;
+use Exception;
 use Google\Protobuf\Internal\Message;
+use InvalidArgumentException;
+use ReflectionProperty;
 
 class Client
 {
+    /**
+     * The pool of curl handles.
+     */
     private HandlePool $pool;
 
     /**
@@ -24,12 +30,21 @@ class Client
     }
 
     /**
+     * When cloning, retain the shared handle pool,
+     * but deep clone the pending context to ensure isolation.
+     */
+    public function __clone()
+    {
+        $this->pendingCtx = clone $this->pendingCtx;
+    }
+
+    /**
      * Returns a new client with the given interceptors.
      */
     public function interceptors(Interceptor ...$interceptors): static
     {
         $clone = clone $this;
-        $clone->pendingCtx->interceptors = $interceptors;
+        $clone->pendingCtx->interceptors = array_merge($clone->pendingCtx->interceptors, $interceptors);
         return $clone;
     }
 
@@ -80,13 +95,13 @@ class Client
     /**
      * Performs the actual gRPC call with interceptors.
      */
-    public function invoke(string $method, Message $args, Message $reply, Interceptor ...$interceptors): UnaryCall
+    public function invoke(string $method, Message $args, UnaryCall $reply): UnaryCall
     {
-        $invoker = fn(CallCtx $ctx, Message $reply) => $this->invokeUnary($ctx, $reply);
+        $invoker = fn(CallCtx $ctx, UnaryCall $reply) => $this->invokeUnary($ctx, $reply);
 
-        foreach (array_reverse(array_merge($this->pendingCtx->interceptors, $interceptors)) as $i) {
+        foreach (array_reverse($this->pendingCtx->interceptors) as $i) {
             $next = $invoker;
-            $invoker = fn(CallCtx $ctx, Message $reply) => $i->interceptUnary($ctx, $reply, $next);
+            $invoker = fn(CallCtx $ctx, UnaryCall $reply) => $i->interceptUnary($ctx, $reply, $next);
         }
 
         $ctx = $this->pendingCtx;
@@ -101,13 +116,12 @@ class Client
 
     /**
      * Performs the actual gRPC call without interceptors.
+     *
+     * @throws InvalidArgumentException if the message could not be encoded
      */
-    private function invokeUnary(CallCtx $ctx, Message $reply): UnaryCall
+    private function invokeUnary(CallCtx $ctx, UnaryCall $reply): UnaryCall
     {
         $msg = $this->prepareMsg($ctx->args, $ctx->enc);
-        if ($msg instanceof UnaryCall) {
-            return $msg;
-        }
 
         /** @var array<string, string> */
         $replyHdr = [];
@@ -120,23 +134,22 @@ class Client
 
         /** @var array<string, mixed> */
         $curlInfo = curl_getinfo($ch);
+        $reply->curlInfo = $curlInfo;
 
         $this->pool->release($ch);
 
         if ($rawReply === false) {
-            $code = match ($errno) {
+            $reply->message = $error;
+            $reply->code = match ($errno) {
                 CURLE_OPERATION_TIMEDOUT => Code::DeadlineExceeded,
                 CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
-                default => throw new \Exception('Unknown curl error (errno: ' . $errno . ', error: ' . $error . ')'),
+                default => Code::Unknown,
             };
-            $result = new UnaryCall($code, $error, $curlInfo);
         } else {
-            $result = $this->decodeReply($rawReply, $replyHdr, $reply);
+            $this->decodeReply($rawReply, $replyHdr, $reply);
         }
 
-        $result->curlInfo = $curlInfo;
-
-        return $result;
+        return $reply;
     }
 
     /**
@@ -185,8 +198,10 @@ class Client
      * Format: 1 byte Compressed-Flag + 4 bytes Message-Length (big-endian)
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+     *
+     * @throws InvalidArgumentException if failed to encode gzip message
      */
-    private function prepareMsg(Message $args, Encoding $enc): string|UnaryCall
+    private function prepareMsg(Message $args, Encoding $enc): string
     {
         $binary = $args->serializeToString();
 
@@ -195,13 +210,7 @@ class Client
             $data = $binary;
         } else {
             $cFlag = 1;
-            $data = match ($enc) {
-                Encoding::Gzip => gzencode($binary, 6) ?: new UnaryCall(Code::Unknown, 'Failed to encode gzip message'),
-            };
-        }
-
-        if ($data instanceof UnaryCall) {
-            return $data;
+            $data = gzencode($binary, 6) ?: throw new InvalidArgumentException('Failed to encode gzip message');
         }
 
         $header = pack('CN', $cFlag, strlen($data));
@@ -212,8 +221,10 @@ class Client
      * Decode gRPC message by stripping 5-byte framing header and decompressing if needed.
      *
      * @see https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+     *
+     * @throws Exception if failed to decode message
      */
-    private function decodeMsg(string $msg, null|Encoding $enc): string|UnaryCall
+    private function decodeMsg(string $msg, null|Encoding $enc): string
     {
         $cFlag = unpack('C', $msg[0])[1];
         $data = substr($msg, 5);
@@ -223,12 +234,10 @@ class Client
             return $data;
         }
 
-        if ($enc === null) {
-            return new UnaryCall(Code::Unknown, 'Message is compressed but no encoding specified');
-        }
         return match ($enc) {
-            Encoding::Identity => new UnaryCall(Code::Unknown, 'Message is compressed but encoding is identity'),
-            Encoding::Gzip => gzdecode($data) ?: new UnaryCall(Code::Unknown, 'Failed to decode gzip message'),
+            null => throw new Exception('Message is compressed but no encoding specified'),
+            Encoding::Identity => throw new Exception('Message is compressed but encoding is identity'),
+            Encoding::Gzip => gzdecode($data) ?: throw new Exception('Failed to decode gzip message'),
         };
     }
 
@@ -237,32 +246,41 @@ class Client
      *
      * @param  array<string, string>  $replyHdr
      */
-    private function decodeReply(string $rawReply, array $replyHdr, Message $reply): UnaryCall
+    private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $reply): void
     {
         if (($replyHdr['content-type'] ?? '') !== 'application/grpc') {
-            return new UnaryCall(Code::Unknown, 'Invalid content-type: ' . $replyHdr['content-type']);
+            $reply->code = Code::Unknown;
+            $reply->message = 'Invalid content-type: ' . $replyHdr['content-type'];
+            return;
         }
 
         $code = Code::tryFrom((int) ($replyHdr['grpc-status'] ?? ''));
         if ($code === null) {
-            return new UnaryCall(Code::Unknown, 'Unknown grpc-status code: ' . $replyHdr['grpc-status']);
+            $reply->code = Code::Unknown;
+            $reply->message = 'Unknown grpc-status code: ' . $replyHdr['grpc-status'];
+            return;
         }
         if ($code !== Code::OK) {
-            return new UnaryCall($code, $replyHdr['grpc-message'] ?? 'Unknown error');
+            $reply->code = $code;
+            $reply->message = $replyHdr['grpc-message'] ?? 'Unknown error';
+            return;
         }
 
         $enc = Encoding::tryFrom($replyHdr['grpc-encoding'] ?? '');
-        $msg = $this->decodeMsg($rawReply, $enc);
-        if ($msg instanceof UnaryCall) {
-            return $msg;
-        }
 
         try {
-            $reply->mergeFromString($msg);
+            // @mago-ignore analysis:non-existent-method,mixed-assignment,possible-method-access-on-null,non-existent-method
+            $dataType = new ReflectionProperty($reply, 'data')->getType()->getName();
+            // @mago-ignore analysis:missing-magic-method,property-type-coercion,unknown-class-instantiation
+            $reply->data = new $dataType();
+            $reply->data->mergeFromString($this->decodeMsg($rawReply, $enc));
         } catch (\Throwable $e) {
-            return new UnaryCall(Code::Internal, $e->getMessage());
+            $reply->code = Code::Internal;
+            $reply->message = $e->getMessage();
+            return;
         }
 
-        return new UnaryCall(Code::OK, $replyHdr['grpc-message'] ?? '');
+        $reply->code = Code::OK;
+        $reply->message = $replyHdr['grpc-message'] ?? '';
     }
 }

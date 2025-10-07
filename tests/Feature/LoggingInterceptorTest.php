@@ -5,12 +5,9 @@ declare(strict_types=1);
 use Iris\Code;
 use Iris\Interceptor\LoggingInterceptor;
 use Tests\Proto\DataTypes;
-use Tests\Proto\DelayRequest;
 use Tests\Proto\FailurePatternRequest;
 
 test('logs the call success', function () {
-    $client = testClient();
-
     $logger = new class() extends \Psr\Log\AbstractLogger {
         public array $logs = [];
 
@@ -20,9 +17,9 @@ test('logs the call success', function () {
         }
     };
 
-    $client->interceptors(new LoggingInterceptor($logger));
+    $client = testClient()->interceptors(new LoggingInterceptor($logger));
 
-    $client->GetDataTypes(new DataTypes(), $reply);
+    $client->GetDataTypes(new DataTypes());
 
     expect($logger->logs)->toBe([
         'gRPC call started',
@@ -31,8 +28,6 @@ test('logs the call success', function () {
 });
 
 test('logs the call failure', function () {
-    $client = testClient();
-
     $logger = new class() extends \Psr\Log\AbstractLogger {
         public array $logs = [];
 
@@ -42,9 +37,9 @@ test('logs the call failure', function () {
         }
     };
 
-    $client->interceptors(new LoggingInterceptor($logger));
+    $client = testClient()->interceptors(new LoggingInterceptor($logger));
 
-    $client->GetFailurePattern((new FailurePatternRequest())->setErrorCode(Code::Unavailable->value), $reply);
+    $client->GetFailurePattern(new FailurePatternRequest()->setErrorCode(Code::Unavailable->value));
 
     expect($logger->logs)->toBe([
         'gRPC call started',
@@ -53,7 +48,6 @@ test('logs the call failure', function () {
 });
 
 test('with multiple loggers', function () {
-    $client = testClient();
     $logs = [];
     $ids = [];
 
@@ -71,12 +65,12 @@ test('with multiple loggers', function () {
         }
     };
 
-    $client->interceptors(
+    $client = testClient()->interceptors(
         new LoggingInterceptor($logger(1, $logs, $ids)),
         new LoggingInterceptor($logger(2, $logs, $ids)),
     );
 
-    $client->GetDataTypes(new DataTypes(), $reply);
+    $client->GetDataTypes(new DataTypes());
 
     expect(count(array_unique($ids)))->toBe(1);
 
