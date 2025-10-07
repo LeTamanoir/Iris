@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -56,6 +58,20 @@ func (s *testService) GetFailurePattern(ctx context.Context, req *FailurePattern
 	}
 
 	Log("GetFailurePattern: returning success")
+	return &Empty{}, nil
+}
+
+func (s *testService) GetMeta(ctx context.Context, req *Empty) (*Empty, error) {
+	meta, _ := metadata.FromIncomingContext(ctx)
+
+	Log("GetMeta: %+v", meta)
+
+	if xTest := meta.Get("x-test"); len(xTest) > 0 {
+		for _, v := range xTest {
+			grpc.SetTrailer(ctx, metadata.Pairs("x-test", v))
+		}
+	}
+
 	return &Empty{}, nil
 }
 

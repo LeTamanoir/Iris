@@ -280,12 +280,13 @@ const file_proto_test_proto_rawDesc = "" +
 	"fail_times\x18\x01 \x01(\x05R\tfailTimes\x12\x1d\n" +
 	"\n" +
 	"error_code\x18\x02 \x01(\x05R\terrorCode\x12\x10\n" +
-	"\x03key\x18\x03 \x01(\tR\x03key2\xd8\x01\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key2\xfd\x01\n" +
 	"\vTestService\x120\n" +
 	"\fGetDataTypes\x12\x0f.test.DataTypes\x1a\x0f.test.DataTypes\x12$\n" +
 	"\bGetEmpty\x12\v.test.Empty\x1a\v.test.Empty\x122\n" +
 	"\x0fGetDelayRequest\x12\x12.test.DelayRequest\x1a\v.test.Empty\x12=\n" +
-	"\x11GetFailurePattern\x12\x1b.test.FailurePatternRequest\x1a\v.test.EmptyBJZ,github.com/letamanoir/iris/test-server/proto\xca\x02\vTests\\Proto\xe2\x02\vTests\\Protob\x06proto3"
+	"\x11GetFailurePattern\x12\x1b.test.FailurePatternRequest\x1a\v.test.Empty\x12#\n" +
+	"\aGetMeta\x12\v.test.Empty\x1a\v.test.EmptyBJZ,github.com/letamanoir/iris/test-server/proto\xca\x02\vTests\\Proto\xe2\x02\vTests\\Protob\x06proto3"
 
 var (
 	file_proto_test_proto_rawDescOnce sync.Once
@@ -313,12 +314,14 @@ var file_proto_test_proto_depIdxs = []int32{
 	1, // 2: test.TestService.GetEmpty:input_type -> test.Empty
 	2, // 3: test.TestService.GetDelayRequest:input_type -> test.DelayRequest
 	3, // 4: test.TestService.GetFailurePattern:input_type -> test.FailurePatternRequest
-	0, // 5: test.TestService.GetDataTypes:output_type -> test.DataTypes
-	1, // 6: test.TestService.GetEmpty:output_type -> test.Empty
-	1, // 7: test.TestService.GetDelayRequest:output_type -> test.Empty
-	1, // 8: test.TestService.GetFailurePattern:output_type -> test.Empty
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
+	1, // 5: test.TestService.GetMeta:input_type -> test.Empty
+	0, // 6: test.TestService.GetDataTypes:output_type -> test.DataTypes
+	1, // 7: test.TestService.GetEmpty:output_type -> test.Empty
+	1, // 8: test.TestService.GetDelayRequest:output_type -> test.Empty
+	1, // 9: test.TestService.GetFailurePattern:output_type -> test.Empty
+	1, // 10: test.TestService.GetMeta:output_type -> test.Empty
+	6, // [6:11] is the sub-list for method output_type
+	1, // [1:6] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
