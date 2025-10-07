@@ -53,7 +53,7 @@ class CallCtx
     /**
      * Additional metadata for the call.
      *
-     * @var array<string, mixed>
+     * @var array<string, string[]>
      */
     public array $meta = [];
 }

@@ -23,6 +23,7 @@ const (
 	TestService_GetEmpty_FullMethodName          = "/test.TestService/GetEmpty"
 	TestService_GetDelayRequest_FullMethodName   = "/test.TestService/GetDelayRequest"
 	TestService_GetFailurePattern_FullMethodName = "/test.TestService/GetFailurePattern"
+	TestService_GetMeta_FullMethodName           = "/test.TestService/GetMeta"
 )
 
 // TestServiceClient is the client API for TestService service.
@@ -33,6 +34,7 @@ type TestServiceClient interface {
 	GetEmpty(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	GetDelayRequest(ctx context.Context, in *DelayRequest, opts ...grpc.CallOption) (*Empty, error)
 	GetFailurePattern(ctx context.Context, in *FailurePatternRequest, opts ...grpc.CallOption) (*Empty, error)
+	GetMeta(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type testServiceClient struct {
@@ -83,6 +85,16 @@ func (c *testServiceClient) GetFailurePattern(ctx context.Context, in *FailurePa
 	return out, nil
 }
 
+func (c *testServiceClient) GetMeta(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, TestService_GetMeta_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestServiceServer is the server API for TestService service.
 // All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility.
@@ -91,6 +103,7 @@ type TestServiceServer interface {
 	GetEmpty(context.Context, *Empty) (*Empty, error)
 	GetDelayRequest(context.Context, *DelayRequest) (*Empty, error)
 	GetFailurePattern(context.Context, *FailurePatternRequest) (*Empty, error)
+	GetMeta(context.Context, *Empty) (*Empty, error)
 	mustEmbedUnimplementedTestServiceServer()
 }
 
@@ -112,6 +125,9 @@ func (UnimplementedTestServiceServer) GetDelayRequest(context.Context, *DelayReq
 }
 func (UnimplementedTestServiceServer) GetFailurePattern(context.Context, *FailurePatternRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFailurePattern not implemented")
+}
+func (UnimplementedTestServiceServer) GetMeta(context.Context, *Empty) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMeta not implemented")
 }
 func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 func (UnimplementedTestServiceServer) testEmbeddedByValue()                     {}
@@ -206,6 +222,24 @@ func _TestService_GetFailurePattern_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestService_GetMeta_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServiceServer).GetMeta(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestService_GetMeta_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServiceServer).GetMeta(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestService_ServiceDesc is the grpc.ServiceDesc for TestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +262,10 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFailurePattern",
 			Handler:    _TestService_GetFailurePattern_Handler,
+		},
+		{
+			MethodName: "GetMeta",
+			Handler:    _TestService_GetMeta_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

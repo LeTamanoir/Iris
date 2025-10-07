@@ -29,4 +29,11 @@ abstract class UnaryCall
      * @var array<string, mixed>
      */
     public array $curlInfo;
+
+    /**
+     * The metadata from the request.
+     *
+     * @var array<string, string[]>
+     */
+    public array $meta;
 }

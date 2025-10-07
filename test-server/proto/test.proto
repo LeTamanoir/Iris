@@ -11,6 +11,7 @@ service TestService {
   rpc GetEmpty(Empty) returns (Empty);
   rpc GetDelayRequest(DelayRequest) returns (Empty);
   rpc GetFailurePattern(FailurePatternRequest) returns (Empty);
+  rpc GetMeta(Empty) returns (Empty);
 }
 
 message DataTypes {
