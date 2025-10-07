@@ -16,6 +16,11 @@ class GetEmptyResponse extends UnaryCall
     public PBEmpty $data;
 }
 
+class GetMetaResponse extends UnaryCall
+{
+    public PBEmpty $data;
+}
+
 class TestClient extends \Iris\Client
 {
     public function GetDataTypes(DataTypes $request): GetDataTypesResponse
@@ -36,5 +41,10 @@ class TestClient extends \Iris\Client
     public function GetFailurePattern(FailurePatternRequest $request): GetEmptyResponse
     {
         return $this->invoke('/test.TestService/GetFailurePattern', $request, new GetEmptyResponse());
+    }
+
+    public function GetMeta(PBEmpty $request): GetMetaResponse
+    {
+        return $this->invoke('/test.TestService/GetMeta', $request, new GetMetaResponse());
     }
 }
