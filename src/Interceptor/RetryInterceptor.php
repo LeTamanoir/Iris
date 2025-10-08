@@ -47,6 +47,7 @@ class RetryInterceptor extends Interceptor
             if ($attempt < $this->maxAttempts) {
                 // exponential backoff: initialDelay * multiplier^(attempt-1)
                 $baseDelay = (int) ($this->delayMs * ($this->multiplier ** ($attempt - 1)));
+                // TODO: maybe use Fiber here, might be useful when we have curl_multi
                 // @mago-ignore analysis:possibly-invalid-argument
                 usleep($baseDelay * 1000);
             }
