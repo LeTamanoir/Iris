@@ -268,13 +268,16 @@ class Client
     }
 
     /**
-     * Decode a gRPC reply message.
+     * Decode metadata from reply headers.
      *
      * @param  array<string, string[]>  $replyHdr
+     * @return array<string, string[]>
+     * @throws Exception if invalid base64 metadata is found
      */
-    private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $reply): void
+    private function decodeMeta(array $replyHdr): array
     {
         $meta = [];
+
         foreach ($replyHdr as $key => $values) {
             // filter out grpc-related headers
             if (str_starts_with($key, 'grpc-')) {
@@ -283,12 +286,36 @@ class Client
 
             // decode binary metadata
             if (str_ends_with($key, '-bin')) {
-                $meta[$key] = array_map(base64_decode(...), $values);
-            } else {
-                $meta[$key] = $values;
+                foreach ($values as $value) {
+                    $decoded = base64_decode($value, true);
+                    if ($decoded === false) {
+                        throw new Exception('Invalid base64 metadata: ' . $value);
+                    }
+                    $meta[$key][] = $decoded;
+                }
+                continue;
             }
+
+            $meta[$key] = $values;
         }
-        $reply->meta = $meta;
+
+        return $meta;
+    }
+
+    /**
+     * Decode a gRPC reply message.
+     *
+     * @param  array<string, string[]>  $replyHdr
+     */
+    private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $reply): void
+    {
+        try {
+            $reply->meta = $this->decodeMeta($replyHdr);
+        } catch (\Throwable $e) {
+            $reply->code = Code::Internal;
+            $reply->message = $e->getMessage();
+            return;
+        }
 
         $getHdrVal = static fn(string $key): string => $replyHdr[$key][0] ?? '';
 
