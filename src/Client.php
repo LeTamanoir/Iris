@@ -93,7 +93,7 @@ class Client
             if (!preg_match('/^[0-9a-z_.-]+$/', $key)) {
                 throw new InvalidArgumentException("Invalid metadata key: '$key'");
             }
-            // TODO add "-bin" header validation
+
             foreach ($values as $value) {
                 // printable chars from space (\x20) to tilde (\x7E)
                 if (!preg_match('/^[\x20-\x7E]+$/', $value)) {
@@ -151,15 +151,6 @@ class Client
         $curlInfo = curl_getinfo($ch);
         $reply->curlInfo = $curlInfo;
 
-        // Filter out grpc-related headers
-        $meta = [];
-        foreach ($replyHdr as $key => $values) {
-            if (!str_starts_with($key, 'grpc-')) {
-                $meta[$key] = $values;
-            }
-        }
-        $reply->meta = $meta;
-
         $this->pool->release($ch);
 
         if ($rawReply === false) {
@@ -191,9 +182,14 @@ class Client
             'grpc-accept-encoding: ' . Encoding::list(),
         ];
 
+        // set metadata headers
         foreach ($ctx->meta as $key => $values) {
             foreach ($values as $value) {
-                $headers[] = $key . ': ' . $value;
+                if (str_ends_with($key, '-bin')) {
+                    $headers[] = $key . ': ' . base64_encode($value);
+                } else {
+                    $headers[] = $key . ': ' . $value;
+                }
             }
         }
 
@@ -272,31 +268,76 @@ class Client
     }
 
     /**
+     * Decode metadata from reply headers.
+     *
+     * @param  array<string, string[]>  $replyHdr
+     * @return array<string, string[]>
+     * @throws Exception if invalid base64 metadata is found
+     */
+    private function decodeMeta(array $replyHdr): array
+    {
+        $meta = [];
+
+        foreach ($replyHdr as $key => $values) {
+            // filter out grpc-related headers
+            if (str_starts_with($key, 'grpc-')) {
+                continue;
+            }
+
+            // decode binary metadata
+            if (str_ends_with($key, '-bin')) {
+                foreach ($values as $value) {
+                    $decoded = base64_decode($value, true);
+                    if ($decoded === false) {
+                        throw new Exception('Invalid base64 metadata: ' . $value);
+                    }
+                    $meta[$key][] = $decoded;
+                }
+                continue;
+            }
+
+            $meta[$key] = $values;
+        }
+
+        return $meta;
+    }
+
+    /**
      * Decode a gRPC reply message.
      *
      * @param  array<string, string[]>  $replyHdr
      */
     private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $reply): void
     {
-        if (($replyHdr['content-type'][0] ?? '') !== 'application/grpc') {
-            $reply->code = Code::Unknown;
-            $reply->message = 'Invalid content-type: ' . ($replyHdr['content-type'][0] ?? '');
+        try {
+            $reply->meta = $this->decodeMeta($replyHdr);
+        } catch (\Throwable $e) {
+            $reply->code = Code::Internal;
+            $reply->message = $e->getMessage();
             return;
         }
 
-        $code = Code::tryFrom((int) ($replyHdr['grpc-status'][0] ?? ''));
+        $getHdrVal = static fn(string $key): string => $replyHdr[$key][0] ?? '';
+
+        if ($getHdrVal('content-type') !== 'application/grpc') {
+            $reply->code = Code::Unknown;
+            $reply->message = 'Invalid content-type: ' . $getHdrVal('content-type');
+            return;
+        }
+
+        $code = Code::tryFrom((int) $getHdrVal('grpc-status'));
         if ($code === null) {
             $reply->code = Code::Unknown;
-            $reply->message = 'Unknown grpc-status code: ' . ($replyHdr['grpc-status'][0] ?? '');
+            $reply->message = 'Unknown grpc-status code: ' . $getHdrVal('grpc-status');
             return;
         }
         if ($code !== Code::OK) {
             $reply->code = $code;
-            $reply->message = $replyHdr['grpc-message'][0] ?? 'Unknown error';
+            $reply->message = $getHdrVal('grpc-message') ?: 'Unknown error';
             return;
         }
 
-        $enc = Encoding::tryFrom($replyHdr['grpc-encoding'][0] ?? '');
+        $enc = Encoding::tryFrom($getHdrVal('grpc-encoding'));
 
         try {
             // @mago-ignore analysis:non-existent-method,mixed-assignment,possible-method-access-on-null,non-existent-method
@@ -311,6 +352,6 @@ class Client
         }
 
         $reply->code = Code::OK;
-        $reply->message = $replyHdr['grpc-message'][0] ?? '';
+        $reply->message = implode(', ', $replyHdr['grpc-message'] ?? []);
     }
 }
