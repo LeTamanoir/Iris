@@ -72,6 +72,12 @@ func (s *testService) GetMeta(ctx context.Context, req *Empty) (*Empty, error) {
 		}
 	}
 
+	if xTest := meta.Get("x-test-bin"); len(xTest) > 0 {
+		for _, v := range xTest {
+			grpc.SetTrailer(ctx, metadata.Pairs("x-test-bin", v))
+		}
+	}
+
 	return &Empty{}, nil
 }
 
