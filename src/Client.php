@@ -93,6 +93,7 @@ class Client
             if (!preg_match('/^[0-9a-z_.-]+$/', $key)) {
                 throw new InvalidArgumentException("Invalid metadata key: '$key'");
             }
+            # TODO add "-bin" header validation
             foreach ($values as $value) {
                 // printable chars from space (\x20) to tilde (\x7E)
                 if (!preg_match('/^[\x20-\x7E]+$/', $value)) {
