@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Iris\Interceptor;
 
-use Iris\CallCtx;
 use Iris\Code;
 use Iris\Interceptor;
 use Iris\UnaryCall;
@@ -25,10 +24,10 @@ class RetryInterceptor extends Interceptor
     ) {}
 
     /**
-     * @param callable(CallCtx, UnaryCall): UnaryCall $invoker
+     * @param callable(UnaryCall): UnaryCall $invoker
      */
     #[\Override]
-    public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
+    public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
     {
         $attempt = 0;
         $result = null;
@@ -36,7 +35,7 @@ class RetryInterceptor extends Interceptor
         while ($attempt < $this->maxAttempts) {
             $attempt++;
 
-            $result = $invoker($ctx, $reply);
+            $result = $invoker($call);
 
             // Check if we should retry this error
             if (!$this->isRetryable($result->code)) {

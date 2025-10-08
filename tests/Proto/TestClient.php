@@ -4,47 +4,72 @@ declare(strict_types=1);
 
 namespace Tests\Proto;
 
+use Iris\CallOptions;
 use Iris\UnaryCall;
 
-class GetDataTypesResponse extends UnaryCall
+class GetDataTypesCall extends UnaryCall
 {
     public DataTypes $data;
 }
 
-class GetEmptyResponse extends UnaryCall
+class GetEmptyCall extends UnaryCall
 {
     public PBEmpty $data;
 }
 
-class GetMetaResponse extends UnaryCall
+class GetMetaCall extends UnaryCall
 {
     public PBEmpty $data;
 }
 
-class TestClient extends \Iris\Client
+class TestService
 {
-    public function GetDataTypes(DataTypes $request): GetDataTypesResponse
+    public static function GetDataTypes(DataTypes $request, CallOptions $options = new CallOptions()): GetDataTypesCall
     {
-        return $this->invoke('/test.TestService/GetDataTypes', $request, new GetDataTypesResponse());
+        $call = new GetDataTypesCall();
+        $call->args = $request;
+        $call->method = '/test.TestService/GetDataTypes';
+        $call->options = $options;
+        return $call;
     }
 
-    public function GetEmpty(PBEmpty $request): GetEmptyResponse
+    public static function GetEmpty(PBEmpty $request, CallOptions $options = new CallOptions()): GetEmptyCall
     {
-        return $this->invoke('/test.TestService/GetEmpty', $request, new GetEmptyResponse());
+        $call = new GetEmptyCall();
+        $call->args = $request;
+        $call->method = '/test.TestService/GetEmpty';
+        $call->options = $options;
+        return $call;
     }
 
-    public function GetDelayRequest(DelayRequest $request): GetEmptyResponse
-    {
-        return $this->invoke('/test.TestService/GetDelayRequest', $request, new GetEmptyResponse());
+    public static function GetDelayRequest(
+        DelayRequest $request,
+        CallOptions $options = new CallOptions(),
+    ): GetEmptyCall {
+        $call = new GetEmptyCall();
+        $call->args = $request;
+        $call->method = '/test.TestService/GetDelayRequest';
+        $call->options = $options;
+        return $call;
     }
 
-    public function GetFailurePattern(FailurePatternRequest $request): GetEmptyResponse
-    {
-        return $this->invoke('/test.TestService/GetFailurePattern', $request, new GetEmptyResponse());
+    public static function GetFailurePattern(
+        FailurePatternRequest $request,
+        CallOptions $options = new CallOptions(),
+    ): GetEmptyCall {
+        $call = new GetEmptyCall();
+        $call->args = $request;
+        $call->method = '/test.TestService/GetFailurePattern';
+        $call->options = $options;
+        return $call;
     }
 
-    public function GetMeta(PBEmpty $request): GetMetaResponse
+    public static function GetMeta(PBEmpty $request, CallOptions $options = new CallOptions()): GetMetaCall
     {
-        return $this->invoke('/test.TestService/GetMeta', $request, new GetMetaResponse());
+        $response = new GetMetaCall();
+        $response->args = $request;
+        $response->method = '/test.TestService/GetMeta';
+        $response->options = $options;
+        return $response;
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Iris\Interceptor;
 
-use Iris\CallCtx;
 use Iris\Code;
 use Iris\Interceptor;
 use Iris\UnaryCall;
@@ -19,37 +18,37 @@ class LoggingInterceptor extends Interceptor
     ) {}
 
     /**
-     * @param callable(CallCtx,UnaryCall): UnaryCall $invoker
+     * @param callable(UnaryCall): UnaryCall $invoker
      */
     #[\Override]
-    public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
+    public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
     {
         $this->logger->info('gRPC call started', [
-            'method' => $ctx->method,
-            'request' => get_class($ctx->args),
-            'call_id' => $ctx->id,
+            'method' => $call->method,
+            'request' => get_class($call->args),
+            // 'call_id' => $ctx->id, TODO: add call id
         ]);
 
         $start = microtime(true);
-        $call = $invoker($ctx, $reply);
+        $call = $invoker($call);
         $duration = microtime(true) - $start;
 
         if ($call->code !== Code::OK) {
             $this->logger->error('gRPC call failed', [
-                'method' => $ctx->method,
+                'method' => $call->method,
                 'duration' => $duration,
                 'code' => $call->code->name,
                 'message' => $call->message,
-                'call_id' => $ctx->id,
+                // 'call_id' => $ctx->id, TODO: add call id
             ]);
         } else {
             $this->logger->info('gRPC call completed', [
                 'code' => $call->code->name,
-                'method' => $ctx->method,
+                'method' => $call->method,
                 'duration' => $duration,
                 // @mago-ignore analysis:missing-magic-method
-                'reply' => get_class($reply->data),
-                'call_id' => $ctx->id,
+                'reply' => get_class($call->data),
+                // 'call_id' => $ctx->id, TODO: add call id
             ]);
         }
 

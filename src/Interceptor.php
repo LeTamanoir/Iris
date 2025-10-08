@@ -11,10 +11,10 @@ namespace Iris;
 abstract class Interceptor
 {
     /**
-     * @param callable(CallCtx,UnaryCall): UnaryCall $invoker
+     * @param callable(UnaryCall): UnaryCall $invoker
      */
-    public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
+    public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
     {
-        return $invoker($ctx, $reply);
+        return $invoker($call);
     }
 }

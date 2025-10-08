@@ -14,6 +14,21 @@ use Google\Protobuf\Internal\Message;
 abstract class UnaryCall
 {
     /**
+     * The request arguments.
+     */
+    public Message $args;
+
+    /**
+     * The call options.
+     */
+    public CallOptions $options;
+
+    /**
+     * The method name.
+     */
+    public string $method;
+
+    /**
      * The gRPC status code.
      */
     public Code $code;
@@ -36,4 +51,13 @@ abstract class UnaryCall
      * @var array<string, string[]>
      */
     public array $meta;
+
+    /**
+     * Wait for the call to complete.
+     * When waiting for multiple calls, please use the `Client::waitCalls` method instead.
+     */
+    public function wait(): void
+    {
+        dd('wait');
+    }
 }

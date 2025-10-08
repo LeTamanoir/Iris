@@ -10,123 +10,36 @@ use Google\Protobuf\Internal\Message;
 use InvalidArgumentException;
 use ReflectionProperty;
 
-class Client
+// TODO: Add global call options merging
+class Connection
 {
     /**
      * The pool of curl handles.
      */
     private HandlePool $pool;
 
-    /**
-     * Context for the next call.
-     */
-    private CallCtx $pendingCtx;
-
     public function __construct(
         public string $host,
     ) {
         $this->pool = new HandlePool(1);
-        $this->pendingCtx = new CallCtx();
-    }
-
-    /**
-     * When cloning, retain the shared handle pool,
-     * but deep clone the pending context to ensure isolation.
-     */
-    public function __clone()
-    {
-        $this->pendingCtx = clone $this->pendingCtx;
-    }
-
-    /**
-     * Returns a new client with the given interceptors.
-     */
-    public function interceptors(Interceptor ...$interceptors): static
-    {
-        $clone = clone $this;
-        $clone->pendingCtx->interceptors = array_merge($clone->pendingCtx->interceptors, $interceptors);
-        return $clone;
-    }
-
-    /**
-     * Returns a new client with the given timeout.
-     */
-    public function timeout(int $ms): static
-    {
-        $clone = clone $this;
-        $clone->pendingCtx->curlOpts[CURLOPT_TIMEOUT_MS] = $ms;
-        return $clone;
-    }
-
-    /**
-     * Returns a new client with the given curl options.
-     *
-     * @param  array<int, mixed>  $curlOpts
-     */
-    public function curlOpts(array $curlOpts): static
-    {
-        $clone = clone $this;
-        $clone->pendingCtx->curlOpts = $curlOpts;
-        return $clone;
-    }
-
-    /**
-     * Returns a new client with the given encoding.
-     */
-    public function encoding(Encoding $enc): static
-    {
-        $clone = clone $this;
-        $clone->pendingCtx->enc = $enc;
-        return $clone;
-    }
-
-    /**
-     * Returns a new client with the given metadata.
-     *
-     * @param  array<string, string[]>  $metas
-     *
-     * @throws InvalidArgumentException if the metadata key or value is invalid
-     */
-    public function meta(array $metas): static
-    {
-        foreach ($metas as $key => $values) {
-            if (!preg_match('/^[0-9a-z_.-]+$/', $key)) {
-                throw new InvalidArgumentException("Invalid metadata key: '$key'");
-            }
-
-            foreach ($values as $value) {
-                // printable chars from space (\x20) to tilde (\x7E)
-                if (!preg_match('/^[\x20-\x7E]+$/', $value)) {
-                    throw new InvalidArgumentException("Invalid metadata value for '$key': '$value'");
-                }
-            }
-        }
-
-        $clone = clone $this;
-        $clone->pendingCtx->meta = $metas;
-        return $clone;
     }
 
     /**
      * Performs the actual gRPC call with interceptors.
      */
-    public function invoke(string $method, Message $args, UnaryCall $reply): UnaryCall
+    public function call(UnaryCall $call): void
     {
-        $invoker = fn(CallCtx $ctx, UnaryCall $reply) => $this->invokeUnary($ctx, $reply);
+        $invoker = $this->invokeUnary(...);
 
-        foreach (array_reverse($this->pendingCtx->interceptors) as $i) {
+        foreach (array_reverse($call->options->interceptors) as $i) {
             $next = $invoker;
-            $invoker = fn(CallCtx $ctx, UnaryCall $reply) => $i->interceptUnary($ctx, $reply, $next);
+            $invoker = fn(UnaryCall $c) => $i->interceptUnary($c, $next);
         }
 
-        $ctx = $this->pendingCtx;
-
         // @mago-ignore analysis:unhandled-thrown-type
-        $ctx->id = bin2hex(random_bytes(16));
-        $ctx->method = $method;
-        $ctx->args = $args;
+        // $ctx->id = bin2hex(random_bytes(16)); TODO: add call id
 
-        return $invoker($ctx, $reply);
+        $invoker($call);
     }
 
     /**
@@ -134,13 +47,13 @@ class Client
      *
      * @throws InvalidArgumentException if the message could not be encoded
      */
-    private function invokeUnary(CallCtx $ctx, UnaryCall $reply): UnaryCall
+    private function invokeUnary(UnaryCall $call): void
     {
-        $msg = $this->prepareMsg($ctx->args, $ctx->enc);
+        $msg = $this->prepareMsg($call->args, $call->options->enc);
 
         /** @var array<string, string[]> */
         $replyHdr = [];
-        $ch = $this->setupHandle($ctx, $ctx->method, $msg, $replyHdr);
+        $ch = $this->setupHandle($call, $msg, $replyHdr);
 
         /** @var string|false */
         $rawReply = curl_exec($ch);
@@ -149,41 +62,40 @@ class Client
 
         /** @var array<string, mixed> */
         $curlInfo = curl_getinfo($ch);
-        $reply->curlInfo = $curlInfo;
+        $call->curlInfo = $curlInfo;
 
         $this->pool->release($ch);
 
         if ($rawReply === false) {
-            $reply->message = $error;
-            $reply->code = match ($errno) {
+            $call->message = $error;
+            $call->code = match ($errno) {
                 CURLE_OPERATION_TIMEDOUT => Code::DeadlineExceeded,
                 CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
                 default => Code::Unknown,
             };
-        } else {
-            $this->decodeReply($rawReply, $replyHdr, $reply);
+            return;
         }
 
-        return $reply;
+        $this->decodeReply($rawReply, $replyHdr, $call);
     }
 
     /**
      * @param  array<string, string[]>  $replyHdr
      */
-    private function setupHandle(CallCtx $ctx, string $method, string $msg, array &$replyHdr): CurlHandle
+    private function setupHandle(UnaryCall $call, string $msg, array &$replyHdr): CurlHandle
     {
         $ch = $this->pool->aquire();
 
         $headers = [
             'content-type: application/grpc',
-            'user-agent: ' . $ctx->userAgent,
+            'user-agent: ' . $call->options->userAgent,
             'te: trailers',
-            'grpc-encoding: ' . $ctx->enc->value,
+            'grpc-encoding: ' . $call->options->enc->value,
             'grpc-accept-encoding: ' . Encoding::list(),
         ];
 
         // set metadata headers
-        foreach ($ctx->meta as $key => $values) {
+        foreach ($call->options->meta as $key => $values) {
             foreach ($values as $value) {
                 if (str_ends_with($key, '-bin')) {
                     $headers[] = $key . ': ' . base64_encode($value);
@@ -203,12 +115,12 @@ class Client
         };
 
         /** @var mixed $v silence linter */
-        foreach ($ctx->curlOpts as $k => $v) {
+        foreach ($call->options->curlOpts as $k => $v) {
             curl_setopt($ch, $k, $v);
         }
 
         curl_setopt_array($ch, [
-            CURLOPT_URL => $this->host . $method,
+            CURLOPT_URL => $this->host . $call->method,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POSTFIELDS => $msg,
@@ -307,33 +219,33 @@ class Client
      *
      * @param  array<string, string[]>  $replyHdr
      */
-    private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $reply): void
+    private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $call): void
     {
         try {
-            $reply->meta = $this->decodeMeta($replyHdr);
+            $call->meta = $this->decodeMeta($replyHdr);
         } catch (\Throwable $e) {
-            $reply->code = Code::Internal;
-            $reply->message = $e->getMessage();
+            $call->code = Code::Internal;
+            $call->message = $e->getMessage();
             return;
         }
 
         $getHdrVal = static fn(string $key): string => $replyHdr[$key][0] ?? '';
 
         if ($getHdrVal('content-type') !== 'application/grpc') {
-            $reply->code = Code::Unknown;
-            $reply->message = 'Invalid content-type: ' . $getHdrVal('content-type');
+            $call->code = Code::Unknown;
+            $call->message = 'Invalid content-type: ' . $getHdrVal('content-type');
             return;
         }
 
         $code = Code::tryFrom((int) $getHdrVal('grpc-status'));
         if ($code === null) {
-            $reply->code = Code::Unknown;
-            $reply->message = 'Unknown grpc-status code: ' . $getHdrVal('grpc-status');
+            $call->code = Code::Unknown;
+            $call->message = 'Unknown grpc-status code: ' . $getHdrVal('grpc-status');
             return;
         }
         if ($code !== Code::OK) {
-            $reply->code = $code;
-            $reply->message = $getHdrVal('grpc-message') ?: 'Unknown error';
+            $call->code = $code;
+            $call->message = $getHdrVal('grpc-message') ?: 'Unknown error';
             return;
         }
 
@@ -341,17 +253,17 @@ class Client
 
         try {
             // @mago-ignore analysis:non-existent-method,mixed-assignment,possible-method-access-on-null,non-existent-method
-            $dataType = new ReflectionProperty($reply, 'data')->getType()->getName();
+            $dataType = new ReflectionProperty($call, 'data')->getType()->getName();
             // @mago-ignore analysis:missing-magic-method,property-type-coercion,unknown-class-instantiation
-            $reply->data = new $dataType();
-            $reply->data->mergeFromString($this->decodeMsg($rawReply, $enc));
+            $call->data = new $dataType();
+            $call->data->mergeFromString($this->decodeMsg($rawReply, $enc));
         } catch (\Throwable $e) {
-            $reply->code = Code::Internal;
-            $reply->message = $e->getMessage();
+            $call->code = Code::Internal;
+            $call->message = $e->getMessage();
             return;
         }
 
-        $reply->code = Code::OK;
-        $reply->message = implode(', ', $replyHdr['grpc-message'] ?? []);
+        $call->code = Code::OK;
+        $call->message = implode(', ', $replyHdr['grpc-message'] ?? []);
     }
 }
