@@ -51,13 +51,4 @@ abstract class UnaryCall
      * @var array<string, string[]>
      */
     public array $meta;
-
-    /**
-     * Wait for the call to complete.
-     * When waiting for multiple calls, please use the `Client::waitCalls` method instead.
-     */
-    public function wait(): void
-    {
-        dd('wait');
-    }
 }

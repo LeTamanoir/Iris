@@ -5,58 +5,89 @@ declare(strict_types=1);
 namespace Iris;
 
 use CurlHandle;
+use CurlMultiHandle;
 use Exception;
+use Fiber;
 use Google\Protobuf\Internal\Message;
 use InvalidArgumentException;
+use Iris\Internal\EventLoop;
+use Iris\Internal\PendingFiber;
 use ReflectionProperty;
 
 // TODO: Add global call options merging
 class Connection
 {
     /**
-     * The pool of curl handles.
+     * The target host of the connection.
+     */
+    public string $host;
+
+    /**
+     * The options for the connection.
+     */
+    private CallOptions $options;
+
+    /**
+     * The pool of curl handles. (avoiding allocation of new handles on every call)
      */
     private HandlePool $pool;
 
-    public function __construct(
-        public string $host,
-    ) {
-        $this->pool = new HandlePool(1);
+    /**
+     * The curl multi handle of the connection. (used in the event loop)
+     */
+    private CurlMultiHandle $mh;
+
+    public function __construct(string $host, CallOptions $options = new CallOptions())
+    {
+        $this->host = $host;
+        $this->pool = new HandlePool(50);
+        $this->mh = curl_multi_init();
+        $this->options = $options;
     }
 
     /**
      * Performs the actual gRPC call with interceptors.
      */
-    public function call(UnaryCall $call): void
+    public function invoke(UnaryCall ...$calls): void
     {
-        $invoker = $this->invokeUnary(...);
+        foreach ($calls as $call) {
+            $call->options = CallOptions::merge($this->options, $call->options);
 
-        foreach (array_reverse($call->options->interceptors) as $i) {
-            $next = $invoker;
-            $invoker = fn(UnaryCall $c) => $i->interceptUnary($c, $next);
+            new Fiber(function (UnaryCall $call): void {
+                $invoker = function (UnaryCall $c): UnaryCall {
+                    $replyHeaders = [];
+
+                    $ch = $this->setupHandle($c, $replyHeaders);
+                    curl_setopt($ch, CURLOPT_PRIVATE, Fiber::getCurrent());
+                    curl_multi_add_handle($this->mh, $ch);
+
+                    // Yield control to the event loop to process the call
+                    Fiber::suspend();
+
+                    $this->processHandle($ch, $c, $replyHeaders);
+                    curl_multi_remove_handle($this->mh, $ch);
+
+                    return $c;
+                };
+
+                foreach (array_reverse($call->options->interceptors) as $i) {
+                    $next = $invoker;
+                    $invoker = fn(UnaryCall $c) => $i->interceptUnary($c, $next);
+                }
+
+                $invoker($call);
+            })->start($call);
         }
 
-        // @mago-ignore analysis:unhandled-thrown-type
-        // $ctx->id = bin2hex(random_bytes(16)); TODO: add call id
+        $ev = new EventLoop();
 
-        $invoker($call);
+        $ev->run($this->mh);
     }
 
-    /**
-     * Performs the actual gRPC call without interceptors.
-     *
-     * @throws InvalidArgumentException if the message could not be encoded
-     */
-    private function invokeUnary(UnaryCall $call): void
+    private function processHandle(CurlHandle $ch, UnaryCall $call, array $replyHeaders): void
     {
-        $msg = $this->prepareMsg($call->args, $call->options->enc);
-
-        /** @var array<string, string[]> */
-        $replyHdr = [];
-        $ch = $this->setupHandle($call, $msg, $replyHdr);
-
         /** @var string|false */
-        $rawReply = curl_exec($ch);
+        $rawReply = curl_multi_getcontent($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
 
@@ -76,13 +107,10 @@ class Connection
             return;
         }
 
-        $this->decodeReply($rawReply, $replyHdr, $call);
+        $this->decodeReply($rawReply, $call, $replyHeaders);
     }
 
-    /**
-     * @param  array<string, string[]>  $replyHdr
-     */
-    private function setupHandle(UnaryCall $call, string $msg, array &$replyHdr): CurlHandle
+    private function setupHandle(UnaryCall $call, array &$replyHeaders): CurlHandle
     {
         $ch = $this->pool->aquire();
 
@@ -90,7 +118,7 @@ class Connection
             'content-type: application/grpc',
             'user-agent: ' . $call->options->userAgent,
             'te: trailers',
-            'grpc-encoding: ' . $call->options->enc->value,
+            'grpc-encoding: ' . $call->options->encoding->value,
             'grpc-accept-encoding: ' . Encoding::list(),
         ];
 
@@ -105,15 +133,6 @@ class Connection
             }
         }
 
-        $handleHdr = static function (\CurlHandle $_, string $h) use (&$replyHdr) {
-            $l = trim($h);
-            if ($l !== '' && !str_starts_with($l, 'HTTP/2 ')) {
-                $p = explode(':', $l, 2);
-                $replyHdr[trim($p[0])][] = trim($p[1] ?? '');
-            }
-            return strlen($h);
-        };
-
         /** @var mixed $v silence linter */
         foreach ($call->options->curlOpts as $k => $v) {
             curl_setopt($ch, $k, $v);
@@ -123,9 +142,16 @@ class Connection
             CURLOPT_URL => $this->host . $call->method,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POSTFIELDS => $msg,
+            CURLOPT_POSTFIELDS => $this->prepareMsg($call->args, $call->options->encoding),
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_HEADERFUNCTION => $handleHdr,
+            CURLOPT_HEADERFUNCTION => static function (CurlHandle $_, string $h) use (&$replyHeaders): int {
+                $l = trim($h);
+                if ($l !== '' && !str_starts_with($l, 'HTTP/2 ')) {
+                    $p = explode(':', $l, 2);
+                    $replyHeaders[trim($p[0])][] = trim($p[1] ?? '');
+                }
+                return strlen($h);
+            },
         ]);
 
         return $ch;
@@ -216,20 +242,18 @@ class Connection
 
     /**
      * Decode a gRPC reply message.
-     *
-     * @param  array<string, string[]>  $replyHdr
      */
-    private function decodeReply(string $rawReply, array $replyHdr, UnaryCall $call): void
+    private function decodeReply(string $rawReply, UnaryCall $call, array $replyHeaders): void
     {
         try {
-            $call->meta = $this->decodeMeta($replyHdr);
+            $call->meta = $this->decodeMeta($replyHeaders);
         } catch (\Throwable $e) {
             $call->code = Code::Internal;
             $call->message = $e->getMessage();
             return;
         }
 
-        $getHdrVal = static fn(string $key): string => $replyHdr[$key][0] ?? '';
+        $getHdrVal = static fn(string $key): string => $replyHeaders[$key][0] ?? '';
 
         if ($getHdrVal('content-type') !== 'application/grpc') {
             $call->code = Code::Unknown;
@@ -264,6 +288,6 @@ class Connection
         }
 
         $call->code = Code::OK;
-        $call->message = implode(', ', $replyHdr['grpc-message'] ?? []);
+        $call->message = implode(', ', $replyHeaders['grpc-message'] ?? []);
     }
 }

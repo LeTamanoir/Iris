@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Iris\Interceptor;
 
+use Fiber;
 use Iris\Code;
 use Iris\Interceptor;
 use Iris\UnaryCall;
@@ -14,14 +15,27 @@ use Iris\UnaryCall;
 class RetryInterceptor extends Interceptor
 {
     /**
-     * @param Code[] $retryableCodes
+     * @param int $maxAttempts Max number of attempts
+     * @param int $delayMs Initial delay in milliseconds
+     * @param float $multiplier Multiplier for the delay `delayMs * multiplier**(attempt-1)`
+     * @param Code[] $retryableCodes Codes that are retryable
      */
     public function __construct(
         private readonly int $maxAttempts = 3,
         private readonly int $delayMs = 100,
         private readonly float $multiplier = 2.0,
         private readonly array $retryableCodes = [Code::Unavailable, Code::Aborted, Code::DeadlineExceeded],
-    ) {}
+    ) {
+        if ($this->maxAttempts < 1) {
+            throw new \InvalidArgumentException('Max attempts must be at least 1');
+        }
+        if ($this->delayMs < 0) {
+            throw new \InvalidArgumentException('Delay must be at least 0');
+        }
+        if ($this->multiplier <= 0.0) {
+            throw new \InvalidArgumentException('Multiplier must be greater than 0');
+        }
+    }
 
     /**
      * @param callable(UnaryCall): UnaryCall $invoker
@@ -32,25 +46,20 @@ class RetryInterceptor extends Interceptor
         $attempt = 0;
         $result = null;
 
-        while ($attempt < $this->maxAttempts) {
+        do {
             $attempt++;
 
             $result = $invoker($call);
 
             // Check if we should retry this error
-            if (!$this->isRetryable($result->code)) {
+            if ($result->code === Code::OK || !$this->isRetryable($result->code)) {
                 return $result;
             }
 
-            // Sleep before the next attempt
-            if ($attempt < $this->maxAttempts) {
-                // exponential backoff: initialDelay * multiplier^(attempt-1)
-                $baseDelay = (int) ($this->delayMs * ($this->multiplier ** ($attempt - 1)));
-                // TODO: maybe use Fiber here, might be useful when we have curl_multi
-                // @mago-ignore analysis:possibly-invalid-argument
-                usleep($baseDelay * 1000);
-            }
-        }
+            // Sleep before the next attempt using exponential backoff
+            $delay = ($this->delayMs * ($this->multiplier ** ($attempt - 1))) / 1_000;
+            Fiber::suspend($delay);
+        } while ($attempt < $this->maxAttempts);
 
         return $result;
     }

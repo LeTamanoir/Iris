@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Iris\Interceptor;
 
+use Fiber;
 use Iris\Code;
 use Iris\Interceptor;
 use Iris\UnaryCall;
@@ -29,9 +30,9 @@ class LoggingInterceptor extends Interceptor
             // 'call_id' => $ctx->id, TODO: add call id
         ]);
 
-        $start = microtime(true);
+        $start = hrtime(true) / 1e9;
         $call = $invoker($call);
-        $duration = microtime(true) - $start;
+        $duration = (hrtime(true) / 1e9) - $start;
 
         if ($call->code !== Code::OK) {
             $this->logger->error('gRPC call failed', [

@@ -47,8 +47,17 @@ function serializeMsg(\Google\Protobuf\Internal\Message $msg): string
     );
 }
 
-function testClient(): \Tests\Proto\TestClient
+function testConn(): \Iris\Connection
 {
     $port = getenv('TEST_SERVER_PORT');
-    return new \Tests\Proto\TestClient("localhost:{$port}");
+    return new \Iris\Connection("[::1]:{$port}");
+}
+
+function delta(string $message): void
+{
+    static $lastTime = hrtime(true) / 1e9;
+    $time = hrtime(true) / 1e9;
+    $delta = $time - $lastTime;
+    $lastTime = $time;
+    dump(sprintf('%8.2fms: %s', $delta * 1000, $message));
 }

@@ -8,12 +8,16 @@ use InvalidArgumentException;
 
 class CallOptions
 {
+    const DEFAULT_ENCODING = Encoding::Identity;
+
+    const DEFAULT_USER_AGENT = 'iris-php/' . \Iris\VERSION;
+
+    const DEFAULT_TIMEOUT = 30_000; // 30 seconds
+
     /**
      * @param  Interceptor[]  $interceptors
      * @param  array<int, mixed>  $curlOpts
      * @param  array<string, string[]>  $meta
-     * @param  int  $timeout
-     * @param  Encoding  $enc
      */
     public function __construct(
         /**
@@ -29,12 +33,12 @@ class CallOptions
         /**
          * The timeout in milliseconds for the call. (default: 30 seconds)
          */
-        public int $timeout = 30_000,
+        public null|int $timeout = null,
 
         /**
-         * The encoding to use for the call.
+         * The encoding to use for the call. (default: Encoding::Identity)
          */
-        public Encoding $enc = Encoding::Identity,
+        public null|Encoding $encoding = null,
 
         /**
          * The metadata to use for the call.
@@ -44,7 +48,7 @@ class CallOptions
         /**
          * The user agent to use for the request.
          */
-        public string $userAgent = 'iris-php/' . \Iris\VERSION,
+        public null|string $userAgent = null,
     ) {
         $this->validateMeta();
     }
@@ -63,5 +67,17 @@ class CallOptions
                 }
             }
         }
+    }
+
+    public static function merge(CallOptions $a, CallOptions $b): self
+    {
+        return new self(
+            interceptors: [...$a->interceptors, ...$b->interceptors],
+            curlOpts: $a->curlOpts + $b->curlOpts,
+            meta: [...$a->meta, ...$b->meta],
+            userAgent: $a->userAgent ?? $b->userAgent ?? self::DEFAULT_USER_AGENT,
+            encoding: $a->encoding ?? $b->encoding ?? self::DEFAULT_ENCODING,
+            timeout: $a->timeout ?? $b->timeout ?? self::DEFAULT_TIMEOUT,
+        );
     }
 }

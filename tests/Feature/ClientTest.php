@@ -2,12 +2,17 @@
 
 declare(strict_types=1);
 
+use Iris\CallOptions;
 use Iris\Code;
 use Iris\Connection;
 use Iris\Encoding;
 use Iris\Interceptor;
+use Iris\Interceptor\LoggingInterceptor;
+use Iris\Interceptor\RetryInterceptor;
 use Iris\UnaryCall;
 use Tests\Proto\DataTypes;
+use Tests\Proto\DelayRequest;
+use Tests\Proto\FailurePatternRequest;
 use Tests\Proto\GetDataTypesResponse;
 use Tests\Proto\PBEmpty;
 use Tests\Proto\TestService;
@@ -16,34 +21,72 @@ test('async client', function () {
     // $client = new \Tests\Proto\TestClient('[::1]:50051');
     // $client = new
 
+    $options = new CallOptions(interceptors: [
+        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
+        //     public function log($level, string|Stringable $message, array $context = []): void
+        //     {
+        //         delta('2: ' . $message);
+        //     }
+        // }),
+        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
+        //     public function log($level, string|Stringable $message, array $context = []): void
+        //     {
+        //         delta('1: ' . $message);
+        //     }
+        // }),
+    ]);
+
     $calls = [];
 
-    $calls[] = TestService::GetDataTypes(new DataTypes());
-    $calls[] = TestService::GetDataTypes(new DataTypes());
-    $calls[] = TestService::GetDataTypes(new DataTypes());
-    $calls[] = TestService::GetDataTypes(new DataTypes());
-    $calls[] = TestService::GetDataTypes(new DataTypes());
+    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(100));
+    // $calls[] = TestService::GetFailurePattern(new FailurePatternRequest()->setErrorCode(Code::Unavailable->value));
+    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(2000));
+    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(250));
+    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(500));
 
-    dump($calls);
+    $connection = new Connection('[::1]:50051', $options);
 
-    $connection = new Connection('[::1]:50051');
+    // $connection->invoke(...$calls);
 
-    foreach ($calls as $call) {
-        $connection->call($call);
-        if ($call->code === Code::OK) {
-            dd($call->code);
-        }
+    $options = new CallOptions(interceptors: [
+        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
+        //     public function log($level, string|Stringable $message, array $context = []): void
+        //     {
+        //         delta('[OUTSIDE] ' . $message);
+        //     }
+        // }),
+        new RetryInterceptor(
+            maxAttempts: 3,
+            delayMs: 100,
+            multiplier: 2,
+            retryableCodes: [Code::Unavailable],
+        ),
+        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
+        //     public function log($level, string|Stringable $message, array $context = []): void
+        //     {
+        //         delta('[INSIDE] ' . $message);
+        //     }
+        // }),
+    ]);
+
+    $expectedCodes = [];
+    for ($i = 0; $i < 100; $i++) {
+        $calls[] = TestService::GetFailurePattern(
+            new FailurePatternRequest()
+                ->setErrorCode(Code::Unavailable->value)
+                ->setFailTimes(2),
+            $options,
+        );
+        $expectedCodes[] = Code::OK;
     }
 
-    dump($calls);
+    $connection->invoke(...$calls);
 
     dd($connection);
 
-    // $call = $client->GetDataTypes(new DataTypes());
-    // BEFORE wait = unsafe to access ANY fields
-    $call->wait();
+    // dd($retry);
 
-    dump($call);
+    expect(array_column($calls, 'code'))->toBe($expectedCodes);
 })->only();
 
 // describe('data transfer', function () {
