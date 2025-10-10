@@ -2,70 +2,87 @@
 
 declare(strict_types=1);
 
+use Iris\CallOptions;
 use Iris\Code;
 use Iris\Interceptor\LoggingInterceptor;
 use Iris\Interceptor\RetryInterceptor;
 use Tests\Proto\FailurePatternRequest;
+use Tests\Proto\TestService;
 
 test('succeeds after transient failures', function () {
-    $client = testClient()->interceptors(new RetryInterceptor(maxAttempts: 3));
+    $conn = testConn(new CallOptions(interceptors: [
+        new RetryInterceptor(maxAttempts: 3),
+    ]));
 
-    $result = $client->GetFailurePattern(
+    $call = TestService::GetFailurePattern(
         new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
     );
 
-    expect($result->code)->toBe(Code::OK);
+    $conn->invoke($call);
+
+    expect($call->code)->toBe(Code::OK);
 });
 
 test('respects max attempts', function () {
-    $client = testClient()->interceptors(new RetryInterceptor(maxAttempts: 2));
+    $conn = testConn(new CallOptions(interceptors: [
+        new RetryInterceptor(maxAttempts: 2),
+    ]));
 
-    $result = $client->GetFailurePattern(
+    $call = TestService::GetFailurePattern(
         new FailurePatternRequest()
             ->setFailTimes(5)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
     );
 
-    expect($result->code)->not->toBeNull();
-    expect($result->code)->toBe(Code::Unavailable);
+    $conn->invoke($call);
+
+    expect($call->code)->not->toBeNull();
+    expect($call->code)->toBe(Code::Unavailable);
 });
 
 test('does not retry non-retryable codes', function () {
-    $client = testClient()->interceptors(new RetryInterceptor(maxAttempts: 3));
+    $conn = testConn(new CallOptions(interceptors: [
+        new RetryInterceptor(maxAttempts: 3),
+    ]));
 
-    $result = $client->GetFailurePattern(
+    $call = TestService::GetFailurePattern(
         new FailurePatternRequest()
             ->setFailTimes(1)
             ->setErrorCode(Code::InvalidArgument->value)
             ->setKey('test-' . uniqid()),
     );
 
-    expect($result->code)->not->toBeNull();
-    expect($result->code)->toBe(Code::InvalidArgument);
+    $conn->invoke($call);
+
+    expect($call->code)->not->toBeNull();
+    expect($call->code)->toBe(Code::InvalidArgument);
 });
 
 test('works with custom retryable codes', function () {
-    $client = testClient()->interceptors(new RetryInterceptor(
-        maxAttempts: 3,
-        retryableCodes: [Code::Internal],
-    ));
+    $conn = testConn(new CallOptions(interceptors: [
+        new RetryInterceptor(
+            maxAttempts: 3,
+            retryableCodes: [Code::Internal],
+        ),
+    ]));
 
-    $result = $client->GetFailurePattern(
+    $call = TestService::GetFailurePattern(
         new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Internal->value)
             ->setKey('test-' . uniqid()),
     );
 
-    expect($result->code)->toBe(Code::OK);
+    $conn->invoke($call);
+
+    expect($call->code)->toBe(Code::OK);
 });
 
 test('works with other interceptors', function () {
-    $client = testClient();
     $logs = [];
 
     $logger = new class($logs) extends \Psr\Log\AbstractLogger {
@@ -79,37 +96,45 @@ test('works with other interceptors', function () {
         }
     };
 
-    $client = $client->interceptors(new LoggingInterceptor($logger), new RetryInterceptor(maxAttempts: 3));
+    $conn = testConn(new CallOptions(interceptors: [
+        new LoggingInterceptor($logger),
+        new RetryInterceptor(maxAttempts: 3),
+    ]));
 
-    $result = $client->GetFailurePattern(
+    $call = TestService::GetFailurePattern(
         new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
     );
+
+    $conn->invoke($call);
 
     // LoggingInterceptor only sees the final result after all retries
     expect($logs)->toBe([
         'gRPC call started',
         'gRPC call completed',
     ]);
-    expect($result->code)->toBe(Code::OK);
+    expect($call->code)->toBe(Code::OK);
 });
 
 test('uses exponential backoff', function () {
-    $client = testClient()->interceptors(new RetryInterceptor(
-        maxAttempts: 3,
-        delayMs: 50,
-        multiplier: 2.0,
-    ));
+    $conn = testConn(new CallOptions(interceptors: [
+        new RetryInterceptor(
+            maxAttempts: 3,
+            delayMs: 50,
+            multiplier: 2.0,
+        ),
+    ]));
 
     $start = microtime(true);
-    $client->GetFailurePattern(
+    $call = TestService::GetFailurePattern(
         new FailurePatternRequest()
             ->setFailTimes(2)
             ->setErrorCode(Code::Unavailable->value)
             ->setKey('test-' . uniqid()),
     );
+    $conn->invoke($call);
     $duration = (microtime(true) - $start) * 1000;
 
     // Should have at least 2 retries with delays:

@@ -15,6 +15,14 @@ class EventLoop
      */
     private array $pendingFibers = [];
 
+    public function addFiber(Fiber $fiber): void
+    {
+        $this->pendingFibers[] = new PendingFiber(
+            fiber: $fiber,
+            resumeAt: 0.0,
+        );
+    }
+
     /**
      * Run the event loop.
      */
@@ -65,7 +73,7 @@ class EventLoop
                     $next = max($next, $pf->resumeAt);
                 }
 
-                if ($next > 0) {
+                if ($next > 0.0) {
                     usleep((int) (($next - $now) * 1_000_000));
                 }
             }
@@ -78,7 +86,7 @@ class EventLoop
     public function resume(Fiber $fiber): void
     {
         if (!$fiber->isSuspended()) {
-            dd('[EVENT LOOP] fiber is not suspended');
+            return;
         }
 
         $t = $fiber->resume();

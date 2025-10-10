@@ -58,7 +58,7 @@ class RetryInterceptor extends Interceptor
 
             // Sleep before the next attempt using exponential backoff
             $delay = ($this->delayMs * ($this->multiplier ** ($attempt - 1))) / 1_000;
-            Fiber::suspend($delay);
+            $this->sleep($delay);
         } while ($attempt < $this->maxAttempts);
 
         return $result;

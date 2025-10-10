@@ -11,7 +11,6 @@ use Fiber;
 use Google\Protobuf\Internal\Message;
 use InvalidArgumentException;
 use Iris\Internal\EventLoop;
-use Iris\Internal\PendingFiber;
 use ReflectionProperty;
 
 // TODO: Add global call options merging
@@ -50,10 +49,12 @@ class Connection
      */
     public function invoke(UnaryCall ...$calls): void
     {
+        $ev = new EventLoop();
+
         foreach ($calls as $call) {
             $call->options = CallOptions::merge($this->options, $call->options);
 
-            new Fiber(function (UnaryCall $call): void {
+            $fiber = new Fiber(function (UnaryCall $call): void {
                 $invoker = function (UnaryCall $c): UnaryCall {
                     $replyHeaders = [];
 
@@ -76,17 +77,18 @@ class Connection
                 }
 
                 $invoker($call);
-            })->start($call);
-        }
+            });
 
-        $ev = new EventLoop();
+            $ev->addFiber($fiber);
+            $fiber->start($call);
+        }
 
         $ev->run($this->mh);
     }
 
     private function processHandle(CurlHandle $ch, UnaryCall $call, array $replyHeaders): void
     {
-        /** @var string|false */
+        /** @var string */
         $rawReply = curl_multi_getcontent($ch);
         $errno = curl_errno($ch);
         $error = curl_error($ch);
@@ -97,13 +99,20 @@ class Connection
 
         $this->pool->release($ch);
 
-        if ($rawReply === false) {
+        if ($errno !== 0) {
             $call->message = $error;
-            $call->code = match ($errno) {
-                CURLE_OPERATION_TIMEDOUT => Code::DeadlineExceeded,
-                CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
-                default => Code::Unknown,
-            };
+
+            // Because we use the grpc-timeout header
+            // see https://github.com/grpc/grpc-go/blob/master/internal/transport/http2_server.go#L629
+            if (str_contains($error, 'HTTP/2 stream 1 was not closed cleanly: CANCEL')) {
+                $call->code = Code::DeadlineExceeded;
+            } else {
+                $call->code = match ($errno) {
+                    CURLE_OPERATION_TIMEDOUT => Code::DeadlineExceeded,
+                    CURLE_COULDNT_CONNECT, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_RESOLVE_PROXY => Code::Unavailable,
+                    default => Code::Unknown,
+                };
+            }
             return;
         }
 
@@ -122,6 +131,10 @@ class Connection
             'grpc-accept-encoding: ' . Encoding::list(),
         ];
 
+        if ($call->options->timeout !== null) {
+            $headers[] = 'grpc-timeout: ' . $call->options->timeout . 'm';
+        }
+
         // set metadata headers
         foreach ($call->options->meta as $key => $values) {
             foreach ($values as $value) {
@@ -131,6 +144,16 @@ class Connection
                     $headers[] = $key . ': ' . $value;
                 }
             }
+        }
+
+        // Set a local timeout as an additional safeguard,
+        // even though grpc-timeout header handles it at the protocol level.
+        if ($call->options->timeout !== null) {
+            curl_setopt($ch, CURLOPT_TIMEOUT_MS, $call->options->timeout);
+        }
+
+        if ($call->options->verbose !== null) {
+            curl_setopt($ch, CURLOPT_VERBOSE, $call->options->verbose);
         }
 
         /** @var mixed $v silence linter */

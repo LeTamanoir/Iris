@@ -1,10 +1,11 @@
 <?php
 
-use Iris\CallCtx;
+use Iris\CallOptions;
 use Iris\Code;
 use Iris\Encoding;
 use Iris\Interceptor;
 use Iris\UnaryCall;
+use Tests\Proto\TestService;
 
 test('supports gzip encoding', function () {
     $request = new Tests\Proto\DataTypes();
@@ -19,26 +20,33 @@ test('supports gzip encoding', function () {
     $identitySize = 0;
     $gzipSize = 0;
 
-    $client = testClient()->interceptors(new class($identitySize, $gzipSize) extends Interceptor {
-        public function __construct(
-            private int &$identitySize,
-            private int &$gzipSize,
-        ) {}
+    $conn = testConn(new CallOptions(interceptors: [
+        new class($identitySize, $gzipSize) extends Interceptor {
+            public function __construct(
+                private int &$identitySize,
+                private int &$gzipSize,
+            ) {}
 
-        public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
-        {
-            $call = $invoker($ctx, $reply);
-            if ($ctx->enc === Encoding::Identity) {
-                $this->identitySize = $call->curlInfo['request_size'];
-            } else {
-                $this->gzipSize = $call->curlInfo['request_size'];
+            public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
+            {
+                $call = $invoker($call);
+                if ($call->options->encoding === Encoding::Identity) {
+                    $this->identitySize = $call->curlInfo['request_size'];
+                } else {
+                    $this->gzipSize = $call->curlInfo['request_size'];
+                }
+                return $call;
             }
-            return $call;
-        }
-    });
+        },
+    ]));
 
-    expect($client->encoding(Encoding::Gzip)->GetDataTypes($request)->code)->toBe(Code::OK);
-    expect($client->encoding(Encoding::Identity)->GetDataTypes($request)->code)->toBe(Code::OK);
+    $gzip = TestService::GetDataTypes($request, new CallOptions(encoding: Encoding::Gzip));
+    $identity = TestService::GetDataTypes($request, new CallOptions(encoding: Encoding::Identity));
+
+    $conn->invoke($gzip, $identity);
+
+    expect($gzip->code)->toBe(Code::OK);
+    expect($identity->code)->toBe(Code::OK);
 
     expect($identitySize)->toBeGreaterThan(0);
     expect($gzipSize)->toBeGreaterThan(0);

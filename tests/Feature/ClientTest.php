@@ -9,6 +9,7 @@ use Iris\Encoding;
 use Iris\Interceptor;
 use Iris\Interceptor\LoggingInterceptor;
 use Iris\Interceptor\RetryInterceptor;
+use Iris\Interceptor\ThrottleInterceptor;
 use Iris\UnaryCall;
 use Tests\Proto\DataTypes;
 use Tests\Proto\DelayRequest;
@@ -17,173 +18,118 @@ use Tests\Proto\GetDataTypesResponse;
 use Tests\Proto\PBEmpty;
 use Tests\Proto\TestService;
 
-test('async client', function () {
-    // $client = new \Tests\Proto\TestClient('[::1]:50051');
-    // $client = new
+describe('data transfer', function () {
+    test('returns correct data', function () {
+        $request = new DataTypes();
+        $request->setStrTest('test');
+        $request->setIntTest(42);
+        $request->setBoolTest(true);
+        $request->setFloatTest(3.14);
+        $request->setDoubleTest(2.71);
+        $request->setBytesTest('bytes');
+        $request->setMapTest(['key' => 'value']);
 
-    $options = new CallOptions(interceptors: [
-        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
-        //     public function log($level, string|Stringable $message, array $context = []): void
-        //     {
-        //         delta('2: ' . $message);
-        //     }
-        // }),
-        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
-        //     public function log($level, string|Stringable $message, array $context = []): void
-        //     {
-        //         delta('1: ' . $message);
-        //     }
-        // }),
-    ]);
+        $conn = testConn();
 
-    $calls = [];
+        $call = TestService::GetDataTypes($request);
+        $conn->invoke($call);
 
-    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(100));
-    // $calls[] = TestService::GetFailurePattern(new FailurePatternRequest()->setErrorCode(Code::Unavailable->value));
-    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(2000));
-    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(250));
-    // $calls[] = TestService::GetDelayRequest(new DelayRequest()->setMs(500));
+        expect($call->code)->toBe(Code::OK);
+        expect(serializeMsg($call->data))->toBe(serializeMsg($request));
+    });
+});
 
-    $connection = new Connection('[::1]:50051', $options);
+describe('interceptors', function () {
+    test('global interceptors are applied to all calls', function () {
+        $calledCount = 0;
 
-    // $connection->invoke(...$calls);
+        $conn = testConn(new CallOptions(interceptors: [new class($calledCount) extends Interceptor {
+            public function __construct(
+                private int &$calledCount,
+            ) {}
 
-    $options = new CallOptions(interceptors: [
-        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
-        //     public function log($level, string|Stringable $message, array $context = []): void
-        //     {
-        //         delta('[OUTSIDE] ' . $message);
-        //     }
-        // }),
-        new RetryInterceptor(
-            maxAttempts: 3,
-            delayMs: 100,
-            multiplier: 2,
-            retryableCodes: [Code::Unavailable],
-        ),
-        // new LoggingInterceptor(new class extends \Psr\Log\AbstractLogger {
-        //     public function log($level, string|Stringable $message, array $context = []): void
-        //     {
-        //         delta('[INSIDE] ' . $message);
-        //     }
-        // }),
-    ]);
+            public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
+            {
+                $this->calledCount++;
+                return $invoker($call);
+            }
+        }]));
 
-    $expectedCodes = [];
-    for ($i = 0; $i < 100; $i++) {
-        $calls[] = TestService::GetFailurePattern(
-            new FailurePatternRequest()
-                ->setErrorCode(Code::Unavailable->value)
-                ->setFailTimes(2),
-            $options,
-        );
-        $expectedCodes[] = Code::OK;
-    }
+        $calls = [];
 
-    $connection->invoke(...$calls);
+        $calls[] = TestService::GetEmpty(new PBEmpty());
+        $calls[] = TestService::GetEmpty(new PBEmpty());
 
-    dd($connection);
+        $conn->invoke(...$calls);
 
-    // dd($retry);
+        expect($calledCount)->toBe(2);
+    });
 
-    expect(array_column($calls, 'code'))->toBe($expectedCodes);
-})->only();
+    test('local interceptors are applied to the call', function () {
+        $conn = testConn();
 
-// describe('data transfer', function () {
-//     test('returns correct data', function () {
-//         $request = new DataTypes();
-//         $request->setStrTest('test');
-//         $request->setIntTest(42);
-//         $request->setBoolTest(true);
-//         $request->setFloatTest(3.14);
-//         $request->setDoubleTest(2.71);
-//         $request->setBytesTest('bytes');
-//         $request->setMapTest(['key' => 'value']);
+        $calledCount = 0;
 
-//         $call = testClient()->GetDataTypes($request);
+        $request = new PBEmpty();
 
-//         expect($call->code)->toBe(Code::OK);
-//         expect(serializeMsg($call->data))->toBe(serializeMsg($request));
-//     });
-// });
+        $calls = [];
 
-// describe('interceptors', function () {
-//     test('global interceptors are applied to all calls', function () {
-//         $calledCount = 0;
+        $calls[] = TestService::GetEmpty($request, new CallOptions(interceptors: [
+            new class($calledCount) extends Interceptor {
+                public function __construct(
+                    private int &$calledCount,
+                ) {}
 
-//         $client = testClient()->interceptors(new class($calledCount) extends Interceptor {
-//             public function __construct(
-//                 private int &$calledCount,
-//             ) {}
+                public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
+                {
+                    $this->calledCount++;
+                    return $invoker($call);
+                }
+            },
+        ]));
 
-//             public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
-//             {
-//                 $this->calledCount++;
-//                 return $invoker($ctx, $reply);
-//             }
-//         });
+        $calls[] = TestService::GetEmpty($request);
 
-//         $request = new PBEmpty();
+        $conn->invoke(...$calls);
 
-//         $client->GetEmpty($request);
-//         $client->GetEmpty($request);
+        expect($calledCount)->toBe(1);
+    });
 
-//         expect($calledCount)->toBe(2);
-//     });
+    test('global and local interceptors are applied to the call', function () {
+        $calledCount = 0;
 
-//     test('local interceptors are applied to the call', function () {
-//         $client = testClient();
+        $conn = testConn(new CallOptions(interceptors: [
+            new class($calledCount) extends Interceptor {
+                public function __construct(
+                    private int &$calledCount,
+                ) {}
 
-//         $calledCount = 0;
+                public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
+                {
+                    $this->calledCount++;
+                    return $invoker($call);
+                }
+            },
+        ]));
 
-//         $request = new PBEmpty();
+        $request = new PBEmpty();
 
-//         $client->interceptors(new class($calledCount) extends Interceptor {
-//             public function __construct(
-//                 private int &$calledCount,
-//             ) {}
+        $call = TestService::GetEmpty($request, new CallOptions(interceptors: [
+            new class($calledCount) extends Interceptor {
+                public function __construct(
+                    private int &$calledCount,
+                ) {}
 
-//             public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
-//             {
-//                 $this->calledCount++;
-//                 return $invoker($ctx, $reply);
-//             }
-//         })->GetEmpty($request);
+                public function interceptUnary(UnaryCall $call, callable $invoker): UnaryCall
+                {
+                    $this->calledCount++;
+                    return $invoker($call);
+                }
+            },
+        ]));
 
-//         $client->GetEmpty($request);
+        $conn->invoke($call);
 
-//         expect($calledCount)->toBe(1);
-//     });
-
-//     test('global and local interceptors are applied to the call', function () {
-//         $calledCount = 0;
-
-//         $client = testClient()->interceptors(new class($calledCount) extends Interceptor {
-//             public function __construct(
-//                 private int &$calledCount,
-//             ) {}
-
-//             public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
-//             {
-//                 $this->calledCount++;
-//                 return $invoker($ctx, $reply);
-//             }
-//         });
-
-//         $request = new PBEmpty();
-
-//         $client->interceptors(new class($calledCount) extends Interceptor {
-//             public function __construct(
-//                 private int &$calledCount,
-//             ) {}
-
-//             public function interceptUnary(CallCtx $ctx, UnaryCall $reply, callable $invoker): UnaryCall
-//             {
-//                 $this->calledCount++;
-//                 return $invoker($ctx, $reply);
-//             }
-//         })->GetEmpty($request);
-
-//         expect($calledCount)->toBe(2);
-//     });
-// });
+        expect($calledCount)->toBe(2);
+    });
+});

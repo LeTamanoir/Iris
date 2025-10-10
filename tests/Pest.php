@@ -11,6 +11,8 @@
  |
  */
 
+use Iris\CallOptions;
+
 pest()->extend(Tests\TestCase::class)->in('Feature');
 
 /*
@@ -47,10 +49,10 @@ function serializeMsg(\Google\Protobuf\Internal\Message $msg): string
     );
 }
 
-function testConn(): \Iris\Connection
+function testConn(CallOptions $options = new CallOptions()): \Iris\Connection
 {
     $port = getenv('TEST_SERVER_PORT');
-    return new \Iris\Connection("[::1]:{$port}");
+    return new \Iris\Connection("[::1]:{$port}", $options);
 }
 
 function delta(string $message): void
